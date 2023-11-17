@@ -77,3 +77,17 @@ class InputShiftRegister:
         GPIO.output(pin, 1)
         time.sleep(self.DELAY)
         GPIO.output(pin, 0)
+
+class DummyInputShiftRegister():
+    """
+    Used for testing, standard keyboard numpad
+    triggers inputs (0-9a-f, hex coded)
+    """
+    def __init__(self):
+        bitmamp = {f'K_{c}': 1<<i for i,c in enumerate('0123456789abcdef'}
+    def read_word(self):
+        word = 0x00
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                word |= self.bitmap[event.key]
+        return word
