@@ -98,6 +98,9 @@ class DummyInputShiftRegister():
     def read_word(self):
         word = 0x00
         for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
             if event.type == pygame.KEYDOWN:
                 bit = self.bitmap.get(event.key)
                 if bit is not None:

@@ -94,6 +94,3 @@ class Mixer:
         
 def lerp(t, a, b):
     return a + t*(b-a)
-
-m = Mixer()
-
