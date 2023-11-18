@@ -88,7 +88,6 @@ class StateMachine:
   PROGRAMS = { }
 
   def __init__(self, game): #input_manager: InputManager):
-    self.preload_all_programs()
     self.game = game
     self.input_manager = game.input_manager
     self.state = State(0x00)
