@@ -3,7 +3,6 @@ import pygame
 import os
 import time
 import threading
-from .event_loop import SoundEndEvent
 from . import config
 
 class Mixer:

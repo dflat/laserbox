@@ -1,7 +1,6 @@
 import time
 import pygame
 from collections import deque, namedtuple
-#from .event_loop import EventLoop, Event, EventType
 from .audio_utils import Mixer
 from .shift_register import InputShiftRegister, OutputShiftRegister
 from .shift_register import DummyInputShiftRegister, DummyOutputShiftRegister
