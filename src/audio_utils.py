@@ -3,12 +3,12 @@ import pygame
 import os
 import time
 import threading
-from event_loop import SoundEndEvent
-from config import PROJECT_ROOT
+from .event_loop import SoundEndEvent
+from . import config
 
 class Mixer:
-    MUSIC_DIR = os.path.join(PROJECT_ROOT, 'assets', 'music')
-    SOUNDS_DIR = os.path.join(PROJECT_ROOT, 'assets', 'sounds')
+    MUSIC_DIR = os.path.join(config.PROJECT_ROOT, 'assets', 'music')
+    SOUNDS_DIR = os.path.join(config.PROJECT_ROOT, 'assets', 'sounds')
     PATCH_DIR = os.path.join(SOUNDS_DIR, 'patches')
     DUCK_DUR = .25
     VOL_LOW = .45
@@ -21,10 +21,11 @@ class Mixer:
 
         ## testing this to get event loop to run smoothly w/out display output
         ## maybe do this in run.py or Game class...
-        os.environ['SDL_VIDEODRIVER'] = 'dummy'
-        pygame.init()
-        pygame.display.set_mode((1,1))
-        ##
+        #os.environ['SDL_VIDEODRIVER'] = 'dummy'
+        if config.DEBUG:
+            pygame.init()
+            #pygame.display.set_mode((1,1))
+            pygame.display.set_mode((500,500))
 
         self.patch = None
         self.patches = { }

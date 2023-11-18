@@ -1,1 +1,2 @@
-PROJECT_ROOT = "/home/pi/electronics/laserbox"
+PROJECT_ROOT = "../laserbox"
+DEBUG = True
