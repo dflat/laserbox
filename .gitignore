@@ -1,4 +1,4 @@
 *.swp
-__pycach__/
+**/__pycache__/
 .venv/
 assets/*
