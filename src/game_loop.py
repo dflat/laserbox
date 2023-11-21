@@ -72,6 +72,24 @@ class OutputManager:
     self.register = register
     self.laser_mask = 2**14 - 1 # first 14 bits for laser state
     self.extra_mask = 3 << 14 # last 2 bits for extra state
+    self.word = 0x00
+
+  def set_bit(self, index, value):
+    if value:
+      self.word |= (1 << index)
+    else:
+      self.word &= ~(1 << index)
+
+  def set_word(self, word):
+    self.word = word
+  
+
+class Animation:
+  def __init__(self, dur, loops=0, done_callback=None):
+    self.dur = dur
+    self.loops = loops
+    self.done_callback = done_callback
+
 
 class Game:
   def __init__(self, FPS=30):
