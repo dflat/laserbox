@@ -18,14 +18,6 @@ class Mixer:
         pygame.mixer.pre_init(sr, bitdepth, channels, buffer)
         pygame.mixer.init()
 
-        ## testing this to get event loop to run smoothly w/out display output
-        ## maybe do this in run.py or Game class...
-        #os.environ['SDL_VIDEODRIVER'] = 'dummy'
-        if config.DEBUG:
-            pygame.init()
-            #pygame.display.set_mode((1,1))
-            pygame.display.set_mode((500,500))
-
         self.patch = None
         self.patches = { }
         self._load_patch('numbers')

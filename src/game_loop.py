@@ -1,11 +1,14 @@
+import sys
 import time
-import pygame
 from collections import deque, namedtuple
+import pygame
 from .audio_utils import Mixer
 from .shift_register import InputShiftRegister, OutputShiftRegister
-from .shift_register import DummyInputShiftRegister, DummyOutputShiftRegister
 from . import config
 from .programs import StateSequence, StateMachine
+from . import config
+if sys.platform == 'linux':
+  import RPi.GPIO as GPIO
 
 class GameClock:
   def __init__(self, FPS):
@@ -19,7 +22,7 @@ class GameClock:
     self.actual_playhead = 0
     self.dt_history = deque(maxlen=60*10)
     
-  def tick(self):
+  def tick(self, fps):
     self.t = time.time()
     self.target_playhead = self.frame * self.target_dt
     self.actual_playhead = self.t - self.t0
@@ -82,41 +85,49 @@ class OutputManager:
 
   def set_word(self, word):
     self.word = word
+
+  def push_word(self):
+    self.register.push_word(self.word)
   
 
 class Animation:
   def __init__(self, dur, loops=0, done_callback=None):
     self.dur = dur
     self.loops = loops
-    self.done_callback = done_callback
+    self.done_callback = done_callbackk
 
 
 class Game:
-  def __init__(self, FPS=30):
-    self.FPS = FPS
-    PISOreg = DummyInputShiftRegister()  # Parallel In, Serial Out register
+  def __init__(self, PISOreg, SIPOreg, mixer):
+    self.FPS = config.FPS
+    #PISOreg = InputShiftRegister()  # Parallel In, Serial Out register
     self.input_manager = InputManager(register=PISOreg)
-    SIPOreg = DummyOutputShiftRegister()       # Serial In, Parallel Out register
+    #SIPOreg = OutputShiftRegister()       # Serial In, Parallel Out register
     self.outputs = OutputManager(register=SIPOreg)
     self.state_machine = StateMachine(self)
+    self.state_machine.swap_program('ClueFinder')
+    self.mixer = mixer
     
   def update(self, dt):
     self.input_manager.poll()
     changed_state = self.input_manager.changed_state
     self.state_machine.update(dt)
         
+  def render(self):
+    pass
+
   def run(self):
     print(self.state_machine.PROGRAMS)
-    self.state_machine.swap_program('ClueFinder')
-    self.m = Mixer()
     self.t_game_start = time.time()
     self.clock = GameClock(self.FPS)
     dt = 1/self.FPS
     while True:
       self.update(dt) 
-       
-      dt = self.clock.tick()
+      self.render()
+      dt = self.clock.tick(self.FPS)
     
+  def quit(self):
+    GPIO.cleanup()
 
 if __name__ == "__main__":
     g = Game()

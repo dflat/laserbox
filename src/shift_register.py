@@ -2,8 +2,6 @@ import time
 import sys
 if sys.platform == 'linux':
     import RPi.GPIO as GPIO
-else:
-    import pygame
 
 class OutputShiftRegister:
     """
@@ -82,33 +80,4 @@ class InputShiftRegister:
         time.sleep(self.DELAY)
         GPIO.output(pin, 0)
 
-class DummyOutputShiftRegister:
-    def __init__(self):
-        pass
 
-class DummyInputShiftRegister():
-    """
-    Used for testing, standard keyboard numpad
-    triggers inputs (0-9a-f, hex coded)
-    """
-    def __init__(self):
-        self.bitmap = {getattr(pygame,f'K_{c}'): i for i,c in enumerate('0123456789abcdef')}
-        self.state = [0]*16
-
-    def read_word(self):
-        word = 0x00
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                bit = self.bitmap.get(event.key)
-                if bit is not None:
-                    self.state[bit] = 1
-            if event.type == pygame.KEYUP:
-                bit = self.bitmap.get(event.key)
-                if bit is not None:
-                    self.state[bit] = 0
-        for i in range(16):
-            word |= (self.state[i] << i)
-        return word
