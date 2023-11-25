@@ -9,7 +9,14 @@ class ClueFinder(Program):
 
         }
         self.sequence_triggers = { }
+        self.patch_map = {  0: 'nouns',
+                            1: 'verbs',
+                            2: 'adverbs',
+                            3: 'articles_and_preps'}
 
+    def start(self):
+        self.game.mixer.use_patch(self.patch_map[0])
+        
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
 
@@ -19,7 +26,7 @@ class ClueFinder(Program):
         """
         super().update(dt)
         # check event loop for input changes
-        for event in self.game.events.get():
+        for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
                 print('button down:', event.key)
                 self.game.mixer.play_by_id(event.key)
@@ -27,14 +34,10 @@ class ClueFinder(Program):
             elif event.type == EventType.BUTTON_UP:
                 print('button up:', event.key)
                 self.game.lasers[event.key].turn_off()
-            elif event.type == EventType.TOGGLE_ON:
-                print('toggle_on:', event.key)
-                if event.key == 0:
-                    self.game.mixer.use_patch('reversed_numbers')
-            elif event.type == EventType.TOGGLE_OFF:
-                print('toggle_off:', event.key)
-                if event.key == 0:
-                    self.game.mixer.use_patch('numbers')
+
+            elif isinstance(event, ToggleEvent):
+                toggle_state = self.game.input_manager.state.toggles
+                self.game.mixer.use_patch(self.patch_map[toggle_state])
 
         # this section/ style of trigger may be defunt (TODO)
         #if self.input_manager.changed_state:

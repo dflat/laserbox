@@ -190,9 +190,16 @@ class Program:
             #action = self.triggers.get(state, self.default_action)
             #action(state)
 
+    def start(self):
+      """
+      Called the first time program is loaded.
+      """
+      return RuntimeError('override this method in subclass')
+
     def make_active_program(self, game):
         self.game = game
         self.input_manager = self.game.input_manager
+        self.start()
         if config.DEBUG:
             print('loaded program: ', self.__class__.__name__)
 

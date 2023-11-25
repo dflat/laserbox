@@ -67,11 +67,11 @@ class InputManager:
       """
       Check for and categorize input-generated events.
       """
-      events.put(StateChangeEvent(state=State(self.state)))  # todo: should this event be an event ?
+      events.put(StateChangeEvent(state=self.state))  # todo: should this event be an event ?
 
-      self.diff = self.prev_state ^ self.state              # bits that changed 
-      self.flipped_on = State(self.diff & self.state)       # changed and is currently on (= just flipped on)
-      self.flipped_off = State(self.diff & self.prev_state) # changed and was previously on (= just flipped off)
+      self.diff = self.prev_state ^ self.state       # bits that changed 
+      self.flipped_on = self.diff & self.state       # changed and is currently on (= just flipped on)
+      self.flipped_off = self.diff & self.prev_state # changed and was previously on (= just flipped off)
 
       if config.DEBUG:
           print('FLIPPED ON:', self.flipped_on)
@@ -125,10 +125,10 @@ class Game:
     self.FPS = config.FPS
     self.input_manager = InputManager(register=PISOreg)
     self.outputs = OutputManager(register=SIPOreg)
-    self.state_machine = StateMachine(self)
-    self.state_machine.swap_program('ClueFinder')
     self.mixer = mixer
-    self.events = events # event loop reference
+    self.events = events # event loop reference (redundant as it is global singleton imported in this module)
+    self.state_machine = StateMachine(self)
+    self.state_machine.swap_program(config.START_PROGRAM)
     
   def update(self, dt):
     self.input_manager.poll()
@@ -140,7 +140,6 @@ class Game:
 
   def run(self):
     self._running = True
-    #print(self.state_machine.PROGRAMS)
     self.t_game_start = time.time()
     self.clock = GameClock(self.FPS)
     dt = 1/self.FPS
