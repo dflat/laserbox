@@ -3,6 +3,7 @@ from .game_loop import Game
 from .shift_register import *
 from .audio_utils import Mixer
 from .simulator.simulator import Simulator
+from .event_loop import events
 
 mixer = Mixer()
 
@@ -14,7 +15,7 @@ if '-s' in sys.argv:
 else:
     PISOreg = InputShiftRegister() 
     SIPOreg = OutputShiftRegister() 
-    game = Game(PISOreg=PISOreg, SIPOreg=SIPOreg, mixer=mixer)
+    game = Game(PISOreg=PISOreg, SIPOreg=SIPOreg, mixer=mixer, events=events)
     game.run()
 
 

@@ -16,6 +16,9 @@ class ClueFinder(Program):
 
     def start(self):
         self.game.mixer.use_patch(self.patch_map[0])
+        #self.game.mixer.load_music('Nightcall.wav')
+        #self.game.mixer.set_music_volume(.1)
+        #self.game.mixer.VOL_HIGH = 0.3
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
@@ -28,12 +31,13 @@ class ClueFinder(Program):
         # check event loop for input changes
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
-                print('button down:', event.key)
+                #print('button down:', event.key)
                 self.game.mixer.play_by_id(event.key)
-                self.game.lasers[event.key].turn_on()
+                #self.game.lasers[event.key].turn_on()
             elif event.type == EventType.BUTTON_UP:
-                print('button up:', event.key)
-                self.game.lasers[event.key].turn_off()
+                pass
+                #print('button up:', event.key)
+                #self.game.lasers[event.key].turn_off()
 
             elif isinstance(event, ToggleEvent):
                 toggle_state = self.game.input_manager.state.toggles

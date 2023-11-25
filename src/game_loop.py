@@ -74,8 +74,9 @@ class InputManager:
       self.flipped_off = self.diff & self.prev_state # changed and was previously on (= just flipped off)
 
       if config.DEBUG:
-          print('FLIPPED ON:', self.flipped_on)
-          print('FLIPPED OFF:', self.flipped_off)
+          pass
+          #print('FLIPPED ON:', self.flipped_on)
+          #print('FLIPPED OFF:', self.flipped_off)
 
       for button_id in self.flipped_on.get_buttons_on():
           events.put(ButtonDownEvent(key=button_id))
@@ -143,14 +144,20 @@ class Game:
     self.t_game_start = time.time()
     self.clock = GameClock(self.FPS)
     dt = 1/self.FPS
-    while True:
-      self.update(dt) 
-      self.render()
-      dt = self.clock.tick(self.FPS)
+    try:
+        while True:
+          self.update(dt) 
+          self.render()
+          dt = self.clock.tick(self.FPS)
+    except:
+        self.quit()
+    self.quit()
     
   def quit(self):
     self._running = False
+    pygame.quit()
     GPIO.cleanup()
+    sys.exit()
 
 if __name__ == "__main__":
     g = Game()

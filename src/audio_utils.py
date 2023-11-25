@@ -10,11 +10,11 @@ class Mixer:
     SOUNDS_DIR = os.path.join(config.PROJECT_ROOT, 'assets', 'sounds')
     PATCH_DIR = os.path.join(SOUNDS_DIR, 'patches')
     DUCK_DUR = .25
-    VOL_LOW = .45
+    VOL_LOW = .15
     VOL_HIGH = 1
     FPS = 30
 
-    def __init__(self, sr=22050*2, bitdepth=-16, channels=2, buffer=2048):
+    def __init__(self, sr=int(22050), bitdepth=-16, channels=2, buffer=int(2048)):
         pygame.mixer.pre_init(sr, bitdepth, channels, buffer)
         pygame.mixer.init()
 
@@ -28,6 +28,9 @@ class Mixer:
         path = os.path.join(self.MUSIC_DIR, filename)
         pygame.mixer.music.load(path)
         pygame.mixer.music.play()
+
+    def set_music_volume(self, vol):
+        pygame.mixer.music.set_volume(vol)
 
     def play(self, sound):
         sound.play()
