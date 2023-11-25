@@ -5,7 +5,8 @@ import pygame
 from .audio_utils import Mixer
 from .shift_register import InputShiftRegister, OutputShiftRegister
 from . import config
-from .programs import StateSequence, StateMachine
+from .programs import State, StateSequence, StateMachine
+from .event_loop import *
 from . import config
 if sys.platform == 'linux':
   import RPi.GPIO as GPIO
@@ -55,17 +56,46 @@ class InputManager:
     if self.state == self.prev_state:
       self.changed_state = False
       return
+
     # state has changed, process new input...
     self.changed_state = True
     self.history.append(self.state)
     self.button_state = self.state & self.button_mask
     self.toggler_state = (self.state & self.toggler_mask) >> 14
 
+    self.generate_events()
+
     # process system wide triggers...TODO
-    #print('new state:', 'buttons: ',self.button_state, 'toggles: ',self.toggler_state)
     # process program specific triggers...TODO
-    
+
     self.prev_state = self.state
+
+  def generate_events(self):
+      """
+      Check for and categorize input generated events.
+      """
+      events.put(StateChangeEvent(state=State(self.state)))  # todo: should this event be an event ?
+
+      self.diff = self.prev_state ^ self.state              # bits that changed 
+      self.flipped_on = State(self.diff & self.state)       # changed and is currently on (= just flipped on)
+      self.flipped_off = State(self.diff & self.prev_state) # changed and was previously on (= just flipped off)
+
+      if config.DEBUG:
+          print('FLIPPED ON:', self.flipped_on)
+          print('FLIPPED OFF:', self.flipped_off)
+
+      for button_id in self.flipped_on.get_buttons_on():
+          events.put(ButtonDownEvent(key=button_id))
+
+      for toggle_id in self.flipped_on.get_toggles_on():
+          events.put(ToggleOnEvent(key=toggle_id))
+
+      for button_id in self.flipped_off.get_buttons_on():
+          events.put(ButtonUpEvent(key=button_id))
+
+      for toggle_id in self.flipped_off.get_toggles_on():
+          events.put(ToggleOffEvent(key=toggle_id))
+
     
   def get_history_sequence(self, n):
       return StateSequence(self.history[-n:])
@@ -94,19 +124,18 @@ class Animation:
   def __init__(self, dur, loops=0, done_callback=None):
     self.dur = dur
     self.loops = loops
-    self.done_callback = done_callbackk
+    self.done_callback = done_callback
 
 
 class Game:
-  def __init__(self, PISOreg, SIPOreg, mixer):
+  def __init__(self, PISOreg, SIPOreg, mixer, events):
     self.FPS = config.FPS
-    #PISOreg = InputShiftRegister()  # Parallel In, Serial Out register
     self.input_manager = InputManager(register=PISOreg)
-    #SIPOreg = OutputShiftRegister()       # Serial In, Parallel Out register
     self.outputs = OutputManager(register=SIPOreg)
     self.state_machine = StateMachine(self)
     self.state_machine.swap_program('ClueFinder')
     self.mixer = mixer
+    self.events = events # event loop reference
     
   def update(self, dt):
     self.input_manager.poll()
@@ -117,7 +146,8 @@ class Game:
     pass
 
   def run(self):
-    print(self.state_machine.PROGRAMS)
+    self._running = True
+    #print(self.state_machine.PROGRAMS)
     self.t_game_start = time.time()
     self.clock = GameClock(self.FPS)
     dt = 1/self.FPS
@@ -127,6 +157,7 @@ class Game:
       dt = self.clock.tick(self.FPS)
     
   def quit(self):
+    self._running = False
     GPIO.cleanup()
 
 if __name__ == "__main__":

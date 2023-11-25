@@ -6,6 +6,7 @@ from pygame.locals import *
 from .. import config
 from ..game_loop import Game
 from ..audio_utils import Mixer
+from ..event_loop import events
 import numpy as np
 from math import sin, cos, pi
 
@@ -57,6 +58,7 @@ class LaserPort(GameObject):
     def render(self, surf):
         pygame.draw.polygon(surf, RED, self.verts)
         if self.on:
+            return
             start = self.pos
             print('start', start)
             end = self.pos + self.direction*self.laser_length
@@ -100,7 +102,8 @@ class Simulator(Game):
     def __init__(self):
         super().__init__(PISOreg=DummyInputShiftRegister(),
                          SIPOreg=DummyOutputShiftRegister(),
-                         mixer=Mixer())
+                         mixer=Mixer(),
+                         events=events)
         self.W = 600
         self.H = 480
         pygame.init()

@@ -21,8 +21,21 @@ class State:
     self.toggles = (word & (3 << 14)) >> 14
     self.word = word
     
-  def __int__(self):
-    return self.word 
+  def get_on(self):
+    return [i for i in range(16) if ((self.word & (1 << i)) >> i)]
+
+  def get_buttons_on(self):
+    return [i for i in range(14) if ((self.buttons & (1 << i)) >> i)]
+
+  def get_toggles_on(self):
+    return [i for i in range(2) if ((self.toggles & (1 << i)) >> i)]
+
+  def to_list(self):
+    state_list = [0]*16
+    for bit_index in range(16):
+      value = (self.word & (1 << bit_index)) >> bit_index
+      state_list[bit_index] = value
+    return state_list
 
   @classmethod
   def from_list(cls, buttons, toggles=(0,0)):
@@ -34,9 +47,27 @@ class State:
     word |= (toggles[1] << 15)
     return cls(word)
 
+  def __int__(self):
+    return self.word 
+
+  def __or__(self, other):
+    if isinstance(other, State):
+      other = other.word
+    return State(self.word | other)
+
+  def __xor__(self, other):
+    if isinstance(other, State):
+      other = other.word
+    return State(self.word ^ other)
+
+  def __and__(self, other):
+    if isinstance(other, State):
+      other = other.word
+    return State(self.word & other)
+
   def __repr__(self):
-      s = f'State<buttons={bin(self.buttons)[2:].zfill(16)}, '
-      s += f'toggles={bin(self.toggles)[2:].zfill(2)}>'
+      s = f'State(buttons={self.get_buttons_on()}, '
+      s += f'toggles={self.get_toggles_on()})'
       return s
     
 class StateSequence:
@@ -91,6 +122,7 @@ class StateMachine:
     self.game = game
     self.input_manager = game.input_manager
     self.state = State(0x00)
+    self.program = None
   
   @classmethod
   def register_program(cls, program):
@@ -107,10 +139,7 @@ class StateMachine:
     to input_manager and game objects.
     """
     self.program = self.PROGRAMS[program_name]
-    self.program.game = self.game
-    self.program.input_manager = self.input_manager
-    if config.DEBUG:
-        print('loaded program: ', program_name)
+    self.program.make_active_program(self.game)
     
   def update(self, dt):
     # TODO: process any system wide input?
@@ -151,6 +180,12 @@ class Program:
             #state = input_manager.state
             #action = self.triggers.get(state, self.default_action)
             #action(state)
+
+    def make_active_program(self, game):
+        self.game = game
+        self.input_manager = self.game.input_manager
+        if config.DEBUG:
+            print('loaded program: ', self.__class__.__name__)
 
     def match_triggers(self, state):
         # match any single-state trigger

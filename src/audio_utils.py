@@ -14,7 +14,7 @@ class Mixer:
     VOL_HIGH = 1
     FPS = 30
 
-    def __init__(self, sr=22050, bitdepth=-16, channels=2, buffer=2048):
+    def __init__(self, sr=22050*2, bitdepth=-16, channels=2, buffer=2048):
         pygame.mixer.pre_init(sr, bitdepth, channels, buffer)
         pygame.mixer.init()
 
