@@ -23,8 +23,10 @@ class ClueFinder(Program):
             if event.type == EventType.BUTTON_DOWN:
                 print('button down:', event.key)
                 self.game.mixer.play_by_id(event.key)
+                self.game.lasers[event.key].turn_on()
             elif event.type == EventType.BUTTON_UP:
                 print('button up:', event.key)
+                self.game.lasers[event.key].turn_off()
             elif event.type == EventType.TOGGLE_ON:
                 print('toggle_on:', event.key)
             elif event.type == EventType.TOGGLE_OFF:
@@ -35,7 +37,7 @@ class ClueFinder(Program):
         #    state = State(self.input_manager.state)
         #    action = self.match_triggers(state)
         #    action(state)
-        
+
         #sequence_action = self.match_sequence_triggers(maxlen=3)
         
 

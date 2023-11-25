@@ -11,6 +11,7 @@ import numpy as np
 from math import sin, cos, pi
 
 BLACK = (0,0,0)
+WHITE = (255,255,255)
 RED = (255,0,0)
 
 def scale(verts, sx, sy):
@@ -40,8 +41,8 @@ class LaserPort(GameObject):
         self.pos = np.array(pos)
         self.verts = self.pos + rot_z(self.VERTS, np.arccos(np.dot(self.UP, direction)))
         self.laser_length = laser_length
-        self.direction = direction
-        self.on = True
+        self.direction = np.array(direction)
+        self.on = False
 
     def get_image(self):
         surf = Surface()
@@ -56,13 +57,10 @@ class LaserPort(GameObject):
         self.on = False  
 
     def render(self, surf):
-        pygame.draw.polygon(surf, RED, self.verts)
+        pygame.draw.polygon(surf, WHITE, self.verts)
         if self.on:
-            return
             start = self.pos
-            print('start', start)
             end = self.pos + self.direction*self.laser_length
-            print('end', end)
             pygame.draw.line(surf, RED, start, end, width=3)
 
 
@@ -116,23 +114,25 @@ class Simulator(Game):
         top, left = 100, 100
         OFFSET = LaserPort.W/2 + LaserPort.PAD/2
         FLOOR_W = LaserPort.W*2 + LaserPort.PAD*3
-        PORT_IDS = list(range(6)) + list(range(8,14)) + [6,7]
+        FLOOR_H = LaserPort.W*6 + LaserPort.PAD*7
+        PORT_IDS = [7,6,8,9,10,11,12,13,5,4,3,2,1,0]
         # numbering starts at 0 being top left, and wraps around clockwise to 13
+        self.lasers = { }
         for i in range(2):
             for j in range(6):
                 x = left + (LaserPort.W + LaserPort.PAD)*j + i*OFFSET
                 y = top + FLOOR_W*i
                 direction = (0, (-1)**(i))
-                LaserPort(pos=(x,y), direction=direction, port_id=PORT_IDS.pop())
+                port_id = PORT_IDS.pop()
+                laser = LaserPort(pos=(x,y), direction=direction, laser_length=FLOOR_W, port_id=port_id)
+                self.lasers[port_id] = laser
         for k in range(2):
             x1 = x + LaserPort.PAD
             y = top + (FLOOR_W - 2*LaserPort.H)/2*(k+1)
             direction = (-1, 0)
-            LaserPort(pos=(x1,y), direction=direction, port_id=PORT_IDS.pop())
-
-
-
-
+            port_id = PORT_IDS.pop()
+            laser = LaserPort(pos=(x1,y), direction=direction, laser_length=FLOOR_H, port_id=port_id)
+            self.lasers[port_id] = laser
 
     def render(self):
         self.screen.fill(BLACK)
