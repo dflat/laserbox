@@ -29,8 +29,12 @@ class ClueFinder(Program):
                 self.game.lasers[event.key].turn_off()
             elif event.type == EventType.TOGGLE_ON:
                 print('toggle_on:', event.key)
+                if event.key == 0:
+                    self.game.mixer.use_patch('reversed_numbers')
             elif event.type == EventType.TOGGLE_OFF:
                 print('toggle_off:', event.key)
+                if event.key == 0:
+                    self.game.mixer.use_patch('numbers')
 
         # this section/ style of trigger may be defunt (TODO)
         #if self.input_manager.changed_state:
