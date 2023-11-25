@@ -42,17 +42,13 @@ class InputManager:
   
   def __init__(self, register: 'InputShiftRegister'):
     self.register = register
-    self.button_mask = 2**14 - 1 # first 14 bits for button state
-    self.toggler_mask = 3 << 14 # last 2 bits for toggle switch state
     self.history = deque(maxlen=self.HISTORY_SIZE)
-    self.state = 0x00
-    self.prev_state = 0x00
-    self.button_state = 0x00
-    self.toggler_state = 0x00
+    self.state = State(0)
+    self.prev_state = State(0)
     self.changed_state = False
     
   def poll(self):
-    self.state = self.register.read_word()
+    self.state = State(self.register.read_word())
     if self.state == self.prev_state:
       self.changed_state = False
       return
@@ -60,9 +56,6 @@ class InputManager:
     # state has changed, process new input...
     self.changed_state = True
     self.history.append(self.state)
-    self.button_state = self.state & self.button_mask
-    self.toggler_state = (self.state & self.toggler_mask) >> 14
-
     self.generate_events()
 
     # process system wide triggers...TODO
@@ -72,7 +65,7 @@ class InputManager:
 
   def generate_events(self):
       """
-      Check for and categorize input generated events.
+      Check for and categorize input-generated events.
       """
       events.put(StateChangeEvent(state=State(self.state)))  # todo: should this event be an event ?
 

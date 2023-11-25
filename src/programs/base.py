@@ -17,9 +17,9 @@ class State:
   are 'on'; or, simply initialize with a 16-bit integer.
   """
   def __init__(self, word:int):
-    self.buttons = word & (2**14-1)
-    self.toggles = (word & (3 << 14)) >> 14
-    self.word = word
+    self.buttons = int(word) & (2**14-1)
+    self.toggles = (int(word) & (3 << 14)) >> 14
+    self.word = int(word)
     
   def get_on(self):
     return [i for i in range(16) if ((self.word & (1 << i)) >> i)]
@@ -64,6 +64,15 @@ class State:
     if isinstance(other, State):
       other = other.word
     return State(self.word & other)
+
+  def __lshift__(self, other):
+    return State(self.word << int(other))
+
+  def __rshift__(self, other):
+    return State(self.word >> int(other))
+
+  def __eq__(self, other):
+    return self.word == int(other)
 
   def __repr__(self):
       s = f'State(buttons={self.get_buttons_on()}, '

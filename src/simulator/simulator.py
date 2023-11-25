@@ -87,11 +87,21 @@ class DummyInputShiftRegister():
             if event.type == pygame.KEYDOWN:
                 bit = self.bitmap.get(event.key)
                 if bit is not None:
-                    self.state[bit] = 1
+                    if event.key in [pygame.K_e, pygame.K_f]: # toggles
+                        if self.state[bit] == 1:
+                            self.state[bit] = 0
+                        else:
+                            self.state[bit] = 1
+                    else:
+                        self.state[bit] = 1
             if event.type == pygame.KEYUP:
                 bit = self.bitmap.get(event.key)
                 if bit is not None:
-                    self.state[bit] = 0
+                    if event.key in [pygame.K_e, pygame.K_f]: # toggles
+                        continue
+                    else:
+                        self.state[bit] = 0
+
         for i in range(16):
             word |= (self.state[i] << i)
         return word
