@@ -7,7 +7,6 @@ from .shift_register import InputShiftRegister, OutputShiftRegister
 from . import config
 from .programs import State, StateSequence, StateMachine
 from .event_loop import *
-from . import config
 if sys.platform == 'linux':
   import RPi.GPIO as GPIO
 
@@ -228,7 +227,8 @@ class Game:
           self.update(dt) 
           self.render()
           dt = self.clock.tick(self.FPS)
-    except:
+    except Exception as e:
+        print(e)
         self.quit()
     self.quit()
     

@@ -50,6 +50,9 @@ class Mixer:
         sound = self.patch[bank_id]
         self.duck_for_sound(sound) if duck else self.play(sound)
 
+    def fadeout_by_id(self, bank_id, ms=100):
+        self.patch[bank_id].fadeout(ms)
+
     def _init_sound_channel(self):
         self.sound_q = threading.Queue()
         self.q_remote = threading.Event()
