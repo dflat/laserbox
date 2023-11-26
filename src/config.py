@@ -1,4 +1,6 @@
-PROJECT_ROOT = "../laserbox"
-DEBUG = True
-FPS = 90
-START_PROGRAM = "MusicMaker"
+
+class config:
+    PROJECT_ROOT = "../laserbox"
+    DEBUG = True
+    FPS = 90
+    START_PROGRAM = "MusicMaker"

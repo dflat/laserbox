@@ -1,9 +1,10 @@
 from pygame.mixer import Sound
 import pygame
 import os
+import subprocess
 import time
 import threading
-from . import config
+from .config import config
 
 class Mixer:
     MUSIC_DIR = os.path.join(config.PROJECT_ROOT, 'assets', 'music')
@@ -42,6 +43,9 @@ class Mixer:
 
     def set_music_volume(self, vol):
         pygame.mixer.music.set_volume(vol)
+
+    def aplay(self, path):
+        subprocess.run(f"aplay {path}", shell=True)
 
     def play(self, sound):
         sound.play()

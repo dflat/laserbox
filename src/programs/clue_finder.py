@@ -9,16 +9,27 @@ class ClueFinder(Program):
 
         }
         self.sequence_triggers = { }
-        self.patch_map = {  0: 'numbers', # nouns
+        self.patch_map = {  0: 'nouns',
                             1: 'verbs',
                             2: 'adverbs',
                             3: 'articles_and_preps'}
 
+        self.clues = [((0,0),(1,1),(2,0)),
+                      ((2,3),(2,2),(2,1))] # (patch_id, button_id)
+        self.clue_idx = 0
+
+    def clue_success(self):
+        # todo : self.game.lasers.dance()
+        self.clue_idx += 1
+        if self.clue_idx >= len(self.clues):
+            print('you won!')
+            # todo: revert control of game back to state machine, or something
+        
     def start(self):
         self.game.mixer.use_patch(self.patch_map[0])
-        self.game.mixer.load_music('ocean_sounds.wav')#'Nightcall22050.wav')
-        #self.game.mixer.set_music_volume(1)
-        #self.game.mixer.VOL_HIGH = 1
+        self.game.mixer.load_music('ocean_sounds.wav', loops=-1)
+        self.game.mixer.set_music_volume(1)
+        self.game.mixer.VOL_HIGH = 1
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))

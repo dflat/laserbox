@@ -4,7 +4,7 @@ base.py
 All programs should subclasss Program, and be put in this (program) directory.
 """
 __all__ = ['State', 'StateSequence', 'StateMachine', 'Program']
-from .. import config
+from ..config import config
 ###########################
 ###    STATE MACHINE    ###
 #                         #

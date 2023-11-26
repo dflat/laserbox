@@ -4,11 +4,14 @@ from collections import deque, namedtuple
 import pygame
 from .audio_utils import Mixer
 from .shift_register import InputShiftRegister, OutputShiftRegister
-from . import config
+from .config import config
 from .programs import State, StateSequence, StateMachine
 from .event_loop import *
 if sys.platform == 'linux':
   import RPi.GPIO as GPIO
+
+if '-p' in sys.argv:
+    config.START_PROGRAM = sys.argv[2]
 
 class GameClock:
   def __init__(self, FPS):
@@ -227,10 +230,12 @@ class Game:
           self.update(dt) 
           self.render()
           dt = self.clock.tick(self.FPS)
+    except KeyboardInterrupt:
+        print('goodbye.')
     except Exception as e:
         print(e)
+    finally:
         self.quit()
-    self.quit()
     
   def quit(self):
     self._running = False
