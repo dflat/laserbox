@@ -16,7 +16,7 @@ class ClueFinder(Program):
 
     def start(self):
         self.game.mixer.use_patch(self.patch_map[0])
-        #self.game.mixer.load_music('ocean_sounds.wav')#'Nightcall22050.wav')
+        self.game.mixer.load_music('ocean_sounds.wav')#'Nightcall22050.wav')
         #self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
         
@@ -33,11 +33,10 @@ class ClueFinder(Program):
             if event.type == EventType.BUTTON_DOWN:
                 #print('button down:', event.key)
                 self.game.mixer.play_by_id(event.key)
-                #self.game.lasers[event.key].turn_on()
+                self.game.lasers.turn_on(event.key)
             elif event.type == EventType.BUTTON_UP:
-                pass
                 #print('button up:', event.key)
-                #self.game.lasers[event.key].turn_off()
+                self.game.lasers.turn_off(event.key)
 
             elif isinstance(event, ToggleEvent):
                 toggle_state = self.game.input_manager.state.toggles
@@ -48,6 +47,8 @@ class ClueFinder(Program):
         #    state = State(self.input_manager.state)
         #    action = self.match_triggers(state)
         #    action(state)
+
+        # todo: set output state...
 
         #sequence_action = self.match_sequence_triggers(maxlen=3)
         
