@@ -9,7 +9,7 @@ class ClueFinder(Program):
 
         }
         self.sequence_triggers = { }
-        self.patch_map = {  0: 'nouns',
+        self.patch_map = {  0: 'numbers', # nouns
                             1: 'verbs',
                             2: 'adverbs',
                             3: 'articles_and_preps'}
@@ -18,7 +18,7 @@ class ClueFinder(Program):
         self.game.mixer.use_patch(self.patch_map[0])
         self.game.mixer.load_music('ocean_sounds.wav')#'Nightcall22050.wav')
         #self.game.mixer.set_music_volume(1)
-        self.game.mixer.VOL_HIGH = 1
+        #self.game.mixer.VOL_HIGH = 1
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
@@ -33,10 +33,11 @@ class ClueFinder(Program):
             if event.type == EventType.BUTTON_DOWN:
                 #print('button down:', event.key)
                 self.game.mixer.play_by_id(event.key)
-                self.game.lasers.turn_on(event.key)
+                #self.game.lasers.turn_on(event.key)
             elif event.type == EventType.BUTTON_UP:
+                pass
                 #print('button up:', event.key)
-                self.game.lasers.turn_off(event.key)
+                #self.game.lasers.turn_off(event.key)
 
             elif isinstance(event, ToggleEvent):
                 toggle_state = self.game.input_manager.state.toggles

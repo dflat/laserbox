@@ -9,6 +9,7 @@ class Mixer:
     MUSIC_DIR = os.path.join(config.PROJECT_ROOT, 'assets', 'music')
     SOUNDS_DIR = os.path.join(config.PROJECT_ROOT, 'assets', 'sounds')
     PATCH_DIR = os.path.join(SOUNDS_DIR, 'patches')
+    EFFECTS_DIR = os.path.join(SOUNDS_DIR, 'effects')
     DUCK_DUR = .25
     VOL_LOW = .15
     VOL_HIGH = 1
@@ -20,14 +21,24 @@ class Mixer:
 
         self.patch = None
         self.patches = { }
+        self.effects = { }
         self._load_patch('numbers')
         self.use_patch('numbers')
         self.fps = self.FPS
 
-    def load_music(self, filename):
+    def load_music(self, filename, loops=-1):
         path = os.path.join(self.MUSIC_DIR, filename)
         pygame.mixer.music.load(path)
-        pygame.mixer.music.play()
+        pygame.mixer.music.play(loops=loops)
+
+    def play_effect(self, filename, loops=0):
+        if filename not in self.effects:
+            self.load_effect(filename)
+        self.effects[filename].play(loops=loops)
+
+    def load_effect(self, filename):
+        path = os.path.join(self.EFFECTS_DIR, filename)
+        self.effects[filename] = Sound(path)
 
     def set_music_volume(self, vol):
         pygame.mixer.music.set_volume(vol)
