@@ -14,7 +14,7 @@ class Mixer:
     VOL_HIGH = 1
     FPS = 30
 
-    def __init__(self, sr=int(22050), bitdepth=-16, channels=2, buffer=int(2048)):
+    def __init__(self, sr=int(22050), bitdepth=-16, channels=1, buffer=int(2048)):
         pygame.mixer.pre_init(sr, bitdepth, channels, buffer)
         pygame.mixer.init()
 
@@ -86,5 +86,25 @@ class Mixer:
         patch = [Sound(f) for f in sorted(os.scandir(patch_path), key=lambda p:p.name)] 
         self.patches[patch_name] = patch
         
+#import simpleaudio as sa
+class SimpleMixer(Mixer):
+
+    def __init__(self, sr=int(22050), bitdepth=-16, channels=1, buffer=int(2048)):
+        self.sr = sr
+        self.channels = channels
+        self.bytes_per_sample = int(abs(bitdepth)/2)
+        self.patch = None
+        self.patches = { }
+        self._load_patch('numbers')
+        self.use_patch('numbers')
+        self.fps = self.FPS
+
+    def _load_patch(self, patch_name):
+        patch_path = os.path.join(self.PATCH_DIR, patch_name)
+        patch = [sa.WaveObject.from_wave_file(f.path)
+                 for f in sorted(os.scandir(patch_path), key=lambda p:p.name)] 
+        self.patches[patch_name] = patch
+
+
 def lerp(t, a, b):
     return a + t*(b-a)

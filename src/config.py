@@ -1,4 +1,4 @@
 PROJECT_ROOT = "../laserbox"
 DEBUG = True
-FPS = 30
+FPS = 90
 START_PROGRAM = "ClueFinder"

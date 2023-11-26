@@ -16,9 +16,9 @@ class ClueFinder(Program):
 
     def start(self):
         self.game.mixer.use_patch(self.patch_map[0])
-        #self.game.mixer.load_music('Nightcall.wav')
-        #self.game.mixer.set_music_volume(.1)
-        #self.game.mixer.VOL_HIGH = 0.3
+        #self.game.mixer.load_music('ocean_sounds.wav')#'Nightcall22050.wav')
+        #self.game.mixer.set_music_volume(1)
+        self.game.mixer.VOL_HIGH = 1
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
