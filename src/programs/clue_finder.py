@@ -14,8 +14,8 @@ class ClueFinder(Program):
                             2: 'adverbs',
                             3: 'articles_and_preps'}
 
-        self.clues = [((0,0),(1,1),(2,0)),
-                      ((2,3),(2,2),(2,1))] # (patch_id, button_id)
+        self.clues = [((0,0),(1,1),(0,2)),
+                      ((2,3),(2,2),(2,1))] # (button_id, toggle_state [i.e. patch_map index])
         self.clue_idx = 0
 
     def clue_success(self):
@@ -25,15 +25,17 @@ class ClueFinder(Program):
             print(f'you found Clue Phrase # {self.clue_idx}!')
             # todo: revert control of game back to state machine, or something
         
-    def check_for_clue_success(self, clue_phrase_length=3):
+    def check_for_clue_success(self, clue_phrase_length=3, max_sequence_length=3):
         current_clue = self.clues[self.clue_idx]
         phrase_word_index = 0
-        for e in events.get_filtered_history(EventType.BUTTON_DOWN, n=clue_phrase_length):
+        for e in events.get_filtered_history(EventType.BUTTON_DOWN, n=max_sequence_length):
             candidate_phrase_word = (e.key, e.state.toggles)
             target_phrase_word = current_clue[phrase_word_index]
+            print('candidate:', candidate_phrase_word, 'target:', target_phrase_word)
             if candidate_phrase_word == target_phrase_word:
                 phrase_word_index += 1
-            if phrase_word_index == clue_phrase_length:
+                print(f'got word {phrase_word_index} correct.')
+            if phrase_word_index == (clue_phrase_length-1):
                 self.clue_success()
 
 
@@ -65,6 +67,7 @@ class ClueFinder(Program):
 
             elif isinstance(event, ToggleEvent):
                 toggle_state = self.game.input_manager.state.toggles
+                print('toggles:', toggle_state)
                 self.game.mixer.use_patch(self.patch_map[toggle_state])
 
         # this section/ style of trigger may be defunt (TODO)
