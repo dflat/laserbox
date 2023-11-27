@@ -69,7 +69,7 @@ class InputManager:
       """
       Check for and categorize input-generated events.
       """
-      events.put(StateChangeEvent(state=self.state))  # todo: should this event be an event ?
+      #events.put(StateChangeEvent(state=self.state))  # todo: should this event be an event ?
 
       self.diff = self.prev_state ^ self.state       # bits that changed 
       self.flipped_on = self.diff & self.state       # changed and is currently on (= just flipped on)
@@ -81,16 +81,16 @@ class InputManager:
           #print('FLIPPED OFF:', self.flipped_off)
 
       for button_id in self.flipped_on.get_buttons_on():
-          events.put(ButtonDownEvent(key=button_id))
+          events.put(ButtonDownEvent(key=button_id, state=self.state))
 
       for toggle_id in self.flipped_on.get_toggles_on():
-          events.put(ToggleOnEvent(key=toggle_id))
+          events.put(ToggleOnEvent(key=toggle_id, state=self.state))
 
       for button_id in self.flipped_off.get_buttons_on():
-          events.put(ButtonUpEvent(key=button_id))
+          events.put(ButtonUpEvent(key=button_id, state=self.state))
 
       for toggle_id in self.flipped_off.get_toggles_on():
-          events.put(ToggleOffEvent(key=toggle_id))
+          events.put(ToggleOffEvent(key=toggle_id, state=self.state))
 
     
   def get_history_sequence(self, n):

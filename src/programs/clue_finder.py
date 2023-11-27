@@ -9,7 +9,7 @@ class ClueFinder(Program):
 
         }
         self.sequence_triggers = { }
-        self.patch_map = {  0: 'nouns',
+        self.patch_map = {  0: 'numbers',
                             1: 'verbs',
                             2: 'adverbs',
                             3: 'articles_and_preps'}
@@ -22,9 +22,22 @@ class ClueFinder(Program):
         # todo : self.game.lasers.dance()
         self.clue_idx += 1
         if self.clue_idx >= len(self.clues):
-            print('you won!')
+            print(f'you found Clue Phrase # {self.clue_idx}!')
             # todo: revert control of game back to state machine, or something
         
+    def check_for_clue_success(self, clue_phrase_length=3):
+        current_clue = self.clues[self.clue_idx]
+        phrase_word_index = 0
+        for e in events.get_filtered_history(EventType.BUTTON_DOWN, n=clue_phrase_length):
+            candidate_phrase_word = (e.key, e.state.toggles)
+            target_phrase_word = current_clue[phrase_word_index]
+            if candidate_phrase_word == target_phrase_word:
+                phrase_word_index += 1
+            if phrase_word_index == clue_phrase_length:
+                self.clue_success()
+
+
+
     def start(self):
         self.game.mixer.use_patch(self.patch_map[0])
         self.game.mixer.load_music('ocean_sounds.wav', loops=-1)
@@ -46,7 +59,7 @@ class ClueFinder(Program):
                 self.game.mixer.play_by_id(event.key)
                 #self.game.lasers.turn_on(event.key)
             elif event.type == EventType.BUTTON_UP:
-                pass
+                self.check_for_clue_success()
                 #print('button up:', event.key)
                 #self.game.lasers.turn_off(event.key)
 

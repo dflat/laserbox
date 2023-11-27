@@ -73,7 +73,7 @@ class ToggleOffEvent(ToggleEvent):
 
 class EventLoop:
     """singlton"""
-    HISTORY_SIZE = 100
+    HISTORY_SIZE = 500
     Q_SIZE = 0
 
     def __init__(self):
@@ -83,6 +83,11 @@ class EventLoop:
     def put(self, event: Event):
         self.q.put(event)
         self.history.append(event) # todo: maybe at to history after consumed (e.g. in get() method) ?
+
+    def get_filtered_history(self, types: 'list(EventType)', n=100):
+        if isinstance(types, EventType): # allow single type arguments
+            types = [types]
+        return [e for e in self.history if e.type in types][-n:]
 
     def get(self):
         for i in range(self.q.qsize()):
