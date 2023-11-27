@@ -80,7 +80,7 @@ class Animation:
     Should be overridden by user in subclass or as callback on Animation init.
     Included here as a default / example.
     """
-    self.frames = [2**i for i in range(14)] + [2**i for i in reversed(range(1, 13))]
+    self.frames = [2**i for i in range(14)] + [2**i for i in reversed(range(13))]
     # files stored in assets/sounds/effects
     sound_effects = [os.path.join('lasers', i) for i in ('00_High.wav', '01_Mid.wav', '02_Low.wav')]
     for filename in sound_effects:
