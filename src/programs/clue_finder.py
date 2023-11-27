@@ -1,5 +1,6 @@
 from .base import *
 from ..event_loop import *
+from ..animation import Animation
 
 class ClueFinder(Program):
     def __init__(self):
@@ -15,15 +16,18 @@ class ClueFinder(Program):
                             3: 'articles_and_preps'}
 
         self.clues = [((0,0),(1,1),(0,2)),
+                        ((0,0),(1,1),(0,2)),
+                        ((0,0),(1,1),(0,2)),
                       ((2,3),(2,2),(2,1))] # (button_id, toggle_state [i.e. patch_map index])
         self.clue_idx = 0
 
     def clue_success(self):
         # todo : self.game.lasers.dance()
         self.clue_idx += 1
+        print(f'you found Clue Phrase # {self.clue_idx}!')
+        self.success_anim.start()
         if self.clue_idx >= len(self.clues):
-            print(f'you found Clue Phrase # {self.clue_idx}!')
-            self.success_anim.start()
+            print(f'you found ALL the clues!')
             # todo: revert control of game back to state machine, or something
         
     def check_for_clue_success(self, clue_phrase_length=3, max_sequence_length=3):
@@ -36,7 +40,7 @@ class ClueFinder(Program):
             if candidate_phrase_word == target_phrase_word:
                 phrase_word_index += 1
                 print(f'got word {phrase_word_index} correct.')
-            if phrase_word_index == (clue_phrase_length-1):
+            if phrase_word_index == (clue_phrase_length):
                 self.clue_success()
 
 
@@ -46,7 +50,7 @@ class ClueFinder(Program):
         self.game.mixer.load_music('ocean_sounds.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
-        self.success_anim = Animation(dur=5)
+        self.success_anim = Animation(dur=1.5, loops=4)
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
