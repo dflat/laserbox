@@ -7,9 +7,8 @@ class Flipper(Program):
     def __init__(self):
         super().__init__()
         self.default_action = self.button_pressed
-        self.board = self.create_board()
 
-    def create_board(self,n=6):
+    def create_board(self,n=14):
         board = [0]*n
         return board
 
@@ -33,23 +32,28 @@ class Flipper(Program):
         return all(self.board)
 
     def victory_dance(self,t=5,k=3, delay = 0.1):
+        time.sleep(.5)
         t0 = time.time()
         t_now = 0
         while t_now < t:
             word = sum(2**random.randint(0,13) for _ in range(k))
-            self.game.lasers.set_word(word)
+            self.game.outputs.push_word(word)
             t_now = time.time() - t0
             time.sleep(delay)
 
     def reset_board(self):
-        self.board = create_board()
-        self.game.laser.set_word(0)
+        self.won = False
+        self.board = self.create_board()
+        self.game.lasers.set_word(0)
 
     def start(self):
-        self.game.mixer.load_music('ocean_sounds.wav', loops=-1)
+        self.game.mixer.load_music('Nightcall22050.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
+
+        self.board = self.create_board()
         self.create_board_pattern()
+        self.won = False
 
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
@@ -59,7 +63,9 @@ class Flipper(Program):
         Called every frame, whether state has changed or not.
         """
         super().update(dt)
-        won = False
+        if self.won:
+            self.victory_dance()
+            self.reset_board()
         # check event loop for input changes
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
@@ -70,25 +76,21 @@ class Flipper(Program):
                     left_pos = pos - 1
                     right_pos = pos + 1
                     self.flip(pos)
-                    if left_pos > 0:
+                    if left_pos >= 0:
                         self.flip(left_pos)
                     if right_pos < len(self.board):
                         self.flip(right_pos)
                     self.update_laser()
             elif event.type == EventType.BUTTON_UP:
-                #print('button up:', event.key)
-                #self.game.lasers.turn_off(event.key)
+                pass
 
             elif isinstance(event, ToggleEvent):
                 toggle_state = self.game.input_manager.state.toggles
-                create_board_pattern()
+                self.create_board_pattern()
                 won = False
 
 
-        won = self.check_for_win()
-        if won:
-            self.victory_dance()
-            self.reset_board()
+        self.won = self.check_for_win()
  
 
     def default_action(self, state: 'State'):

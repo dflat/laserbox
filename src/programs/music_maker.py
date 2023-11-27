@@ -13,7 +13,7 @@ class MusicMaker(Program):
         sr=int(44100/2)
         bitdepth=-16
         channels=1
-        buffer=int(2048)
+        buffer=int(2048//4)
         pygame.mixer.quit()
         pygame.mixer.init(sr, bitdepth, channels, buffer)
         self.game.mixer.use_patch(self.patch_map[0])
