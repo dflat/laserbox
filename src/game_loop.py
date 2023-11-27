@@ -199,14 +199,18 @@ class Animation:
   currently_running = { }
   _anim_id = 0
 
-  def __init__(self, game, dur, loops=0, done_callback=None):
-    self.game = game # reference to game object
+  def __init__(self, dur, loops=0, done_callback=None):
     self.dur = dur
     self.loops = loops
     self.done = done_callback or self.done
 
     self.anim_id = self._anim_id
     self.anim_id += 1
+
+  @classmethod
+  def update_all(cls, game, dt):
+    for anim_id, animation in cls.currently_running.items():
+      animation.update(game, dt)
 
   def start(self):
     """
@@ -234,7 +238,8 @@ class Animation:
       self.play_frame(game)
 
     self.tick_no += 1
-    if self.t >= self.dur or self.frame_no >= len(self.frames) - 1:
+    #if self.t >= self.dur or self.frame_no >= len(self.frames) - 1:
+    if self.frame_no >= len(self.frames) - 1:
       self.finish()
 
   def finish(self):
@@ -261,6 +266,7 @@ class Animation:
     self.audio_frames = [random.choice(sound_effects) for _ in range(len(self.frames))]
     frame_time = .1
     self.frame_times = [frame_time*i for i in range(len(self.frames))]
+    print('animation set_up finished.')
 
 
   def check_for_next_frame(self):
@@ -278,7 +284,7 @@ class Animation:
 
   def play_frame(self, game):
       """
-      Will be called in game loop via self.pump during main update phase.
+      Will be called in game loop during main update phase.
       """
       word = self.frames[self.frame_no] # uses complete word here, but could instead turn individual lasers on/off
       game.lasers.set_word(word)
@@ -321,6 +327,9 @@ class Game:
     # read input
     self.input_manager.poll()
     changed_state = self.input_manager.changed_state
+
+    # play any ongoing animations
+    Animation.update_all(self, dt)
 
     # update currently running program
     self.state_machine.update(dt)

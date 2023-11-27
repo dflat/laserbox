@@ -23,6 +23,7 @@ class ClueFinder(Program):
         self.clue_idx += 1
         if self.clue_idx >= len(self.clues):
             print(f'you found Clue Phrase # {self.clue_idx}!')
+            self.success_anim.start()
             # todo: revert control of game back to state machine, or something
         
     def check_for_clue_success(self, clue_phrase_length=3, max_sequence_length=3):
@@ -45,6 +46,7 @@ class ClueFinder(Program):
         self.game.mixer.load_music('ocean_sounds.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
+        self.success_anim = Animation(dur=5)
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
