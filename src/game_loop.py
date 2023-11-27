@@ -255,7 +255,7 @@ class Animation:
     """
     self.frames = [2**i for i in range(13)] + [2**i for i in range(13, 1, -1)]
     # files stored in assets/sounds/effects
-    sound_effects = [os.path.join('lasers', i) for i in ('00.wav', '01.wav', '02.wav')]
+    sound_effects = [os.path.join('lasers', i) for i in ('00_High.wav', '01_Mid.wav', '02_Low.wav')]
     for filename in sound_effects:
         self.game.mixer.load_effect(filename)
     self.audio_frames = [random.choice(sound_effects) for _ in range(len(self.frames))]
