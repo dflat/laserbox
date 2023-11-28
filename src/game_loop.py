@@ -148,6 +148,7 @@ class Game:
           dts.append(dt)
     except KeyboardInterrupt:
         print('goodbye.')
+        print('avg dt:', sum(dts)/len(dts))
     except Exception as e:
         print('raising unhandled exception in game.run:', e)
         raise
