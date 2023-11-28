@@ -4,7 +4,7 @@ import pygame
 from pygame import Surface
 from pygame.locals import *
 from .. import config
-from ..game_loop import Game
+from ..game_loop import Game, LaserBay
 from ..audio_utils import Mixer
 from ..event_loop import events
 import numpy as np
@@ -50,10 +50,10 @@ class LaserPort(GameObject):
     def update(self, dt):
         pass
 
-    def turn_on(self):
+    def _turn_on(self):
         self.on = True
 
-    def turn_off(self):
+    def _turn_off(self):
         self.on = False  
 
     def render(self, surf):
@@ -64,10 +64,48 @@ class LaserPort(GameObject):
             pygame.draw.line(surf, RED, start, end, width=3)
 
 
+class DummyLaserBay(LaserBay):
+    def __init__(self, n=14):
+        self.n = n
+        self.word = 0
+        self.clean = True
+        self.lasers = { }
+        self._init_objects()
+
+    def _init_objects(self):
+        top, left = 100, 100
+        OFFSET = LaserPort.W/2 + LaserPort.PAD/2
+        FLOOR_W = LaserPort.W*2 + LaserPort.PAD*3
+        FLOOR_H = LaserPort.W*6 + LaserPort.PAD*7
+        PORT_IDS = [7,6,8,9,10,11,12,13,5,4,3,2,1,0]
+        # numbering starts at 0 being top left, and wraps around clockwise to 13
+        for i in range(2):
+            for j in range(6):
+                x = left + (LaserPort.W + LaserPort.PAD)*j + i*OFFSET
+                y = top + FLOOR_W*i
+                direction = (0, (-1)**(i))
+                port_id = PORT_IDS.pop()
+                laser = LaserPort(pos=(x,y), direction=direction, laser_length=FLOOR_W, port_id=port_id)
+                self.lasers[port_id] = laser
+        for k in range(2):
+            x1 = x + LaserPort.PAD
+            y = top + (FLOOR_W - 2*LaserPort.H)/2*(k+1)
+            direction = (-1, 0)
+            port_id = PORT_IDS.pop()
+            laser = LaserPort(pos=(x1,y), direction=direction, laser_length=FLOOR_H, port_id=port_id)
+            self.lasers[port_id] = laser
 
 class DummyOutputShiftRegister:
     def __init__(self):
+        print('init DummyOutputShiftRegister')
         pass
+
+    def push_word(self, word):
+        for laser in LaserPort.group:
+            if word & (1 << laser.port_id):
+                laser._turn_on()
+            else:
+                laser._turn_off()
 
 class DummyInputShiftRegister():
     """
@@ -118,37 +156,13 @@ class Simulator(Game):
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode((self.W,self.H))
         self.frame = 0
-        self._init_objects()
-
-    def _init_objects(self):
-        top, left = 100, 100
-        OFFSET = LaserPort.W/2 + LaserPort.PAD/2
-        FLOOR_W = LaserPort.W*2 + LaserPort.PAD*3
-        FLOOR_H = LaserPort.W*6 + LaserPort.PAD*7
-        PORT_IDS = [7,6,8,9,10,11,12,13,5,4,3,2,1,0]
-        # numbering starts at 0 being top left, and wraps around clockwise to 13
-        self.lasers = { }
-        for i in range(2):
-            for j in range(6):
-                x = left + (LaserPort.W + LaserPort.PAD)*j + i*OFFSET
-                y = top + FLOOR_W*i
-                direction = (0, (-1)**(i))
-                port_id = PORT_IDS.pop()
-                laser = LaserPort(pos=(x,y), direction=direction, laser_length=FLOOR_W, port_id=port_id)
-                self.lasers[port_id] = laser
-        for k in range(2):
-            x1 = x + LaserPort.PAD
-            y = top + (FLOOR_W - 2*LaserPort.H)/2*(k+1)
-            direction = (-1, 0)
-            port_id = PORT_IDS.pop()
-            laser = LaserPort(pos=(x1,y), direction=direction, laser_length=FLOOR_H, port_id=port_id)
-            self.lasers[port_id] = laser
+        self.lasers = DummyLaserBay(14)
 
     def render(self):
+        super().render()
         self.screen.fill(BLACK)
         for laser in LaserPort.group:
             laser.render(self.screen)
-        #print('frame:',self.frame)
         pygame.display.flip()
 
     def update(self, dt):

@@ -19,6 +19,7 @@ class Mixer:
     def __init__(self, sr=int(22050), bitdepth=-16, channels=1, buffer=int(2048)):
         pygame.mixer.pre_init(sr, bitdepth, channels, buffer)
         pygame.mixer.init()
+        print(f'mixer initialized in Mixer class to sr:{sr}, buffer:{buffer}')
 
         self.patch = None
         self.patches = { }
@@ -101,7 +102,7 @@ class Mixer:
         Patch should be 14 wav files @ 22050 sr named 01.wav to 14.wav 
         """
         patch_path = os.path.join(self.PATCH_DIR, patch_name)
-        patch = [Sound(f) for f in sorted(os.scandir(patch_path), key=lambda p:p.name)] 
+        patch = [Sound(f.path) for f in sorted(os.scandir(patch_path), key=lambda p:p.name)] 
         self.patches[patch_name] = patch
         
 #import simpleaudio as sa

@@ -1,6 +1,7 @@
 from collections import deque
 from .event_loop import *
 from .programs import State, StateSequence
+from .config import config
 
 class InputManager:
   HISTORY_SIZE = 100

@@ -46,11 +46,12 @@ class ClueFinder(Program):
 
 
     def start(self):
+        print('cluefinder starting...')
         self.game.mixer.use_patch(self.patch_map[0])
-        self.game.mixer.load_music('ocean_sounds.wav', loops=-1)
+        self.game.mixer.load_music('ocean_sounds22050.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
-        self.success_anim = Animation(dur=1.5, loops=4)
+        self.success_anim = Animation(dur=5, loops=3)
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
@@ -86,8 +87,5 @@ class ClueFinder(Program):
 
         #sequence_action = self.match_sequence_triggers(maxlen=3)
         
-
-    def default_action(self, state: 'State'):
-        self.button_presssed(state)
 
 ClueFinder()

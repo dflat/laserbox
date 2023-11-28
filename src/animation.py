@@ -51,7 +51,7 @@ class Animation:
     """
     Do not override. Called once per game frame, and drives animation.
     """
-    self.t += dt
+    self.t += dt/1000 # note: how was this working on rzero before /1000 ???
 
     frame_ready = self.check_for_next_frame() # checks if ready for next frame
     if frame_ready:

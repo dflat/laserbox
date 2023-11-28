@@ -16,6 +16,7 @@ class MusicMaker(Program):
         buffer=int(2048//4)
         pygame.mixer.quit()
         pygame.mixer.init(sr, bitdepth, channels, buffer)
+        print(f'mixer re-initialized by MusicMaker to sr:{sr}, buffer:{buffer}')
         self.game.mixer.use_patch(self.patch_map[0])
         self.game.mixer.load_effect('Instruments_A_BackingTrack.wav')
         self.game.mixer.play_effect('Instruments_A_BackingTrack.wav', loops=-1)
