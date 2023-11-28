@@ -124,7 +124,7 @@ class Game:
     changed_state = self.input_manager.changed_state
 
     # play any ongoing animations
-    Animation.update_all(self, dt)
+    Animation.update_all(dt)
 
     # update currently running program
     self.state_machine.update(dt)

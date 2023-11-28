@@ -1,6 +1,6 @@
 from .base import *
 from ..event_loop import *
-from ..animation import Animation
+from ..animation import Animation, ping_pong, random_k_dance
 
 class ClueFinder(Program):
     def __init__(self):
@@ -51,7 +51,8 @@ class ClueFinder(Program):
         self.game.mixer.load_music('ocean_sounds22050.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
-        self.success_anim = Animation(dur=2000, loops=3)
+        #self.success_anim = ping_pong(fps=5, loops=3) #Animation(dur=2000, loops=3)
+        self.success_anim = random_k_dance(k=3, fps=5, dur=10) #Animation(dur=2000, loops=3)
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))

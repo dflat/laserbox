@@ -77,8 +77,8 @@ class DummyLaserBay(LaserBay):
         OFFSET = LaserPort.W/2 + LaserPort.PAD/2
         FLOOR_W = LaserPort.W*2 + LaserPort.PAD*3
         FLOOR_H = LaserPort.W*6 + LaserPort.PAD*7
-        PORT_IDS = [7,6,8,9,10,11,12,13,5,4,3,2,1,0]
-        # numbering starts at 0 being top left, and wraps around clockwise to 13
+        PORT_IDS = [6,7,5,4,3,2,1,0,8,9,10,11,12,13]#[7,6,8,9,10,11,12,13,5,4,3,2,1,0]
+        # numbering starts at 0 being bottom left, and wraps around counter-clockwise to 13
         for i in range(2):
             for j in range(6):
                 x = left + (LaserPort.W + LaserPort.PAD)*j + i*OFFSET
