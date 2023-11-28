@@ -39,7 +39,7 @@ class GameClock:
     self.dt_history.append(dt)
     self.prev_t = self.t
     self.frame += 1
-    return dt
+    return dt*1000
 
 class LaserPort:
   """
@@ -138,7 +138,7 @@ class Game:
     self._running = True
     self.t_game_start = time.time()
     self.clock = GameClock(self.FPS)
-    dt = 1/self.FPS
+    dt = 1000/self.FPS
     try:
         while True:
           self.update(dt) 

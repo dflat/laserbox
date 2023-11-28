@@ -15,7 +15,7 @@ class Animation:
   game = None
 
   def __init__(self, dur, loops=0, done_callback=None):
-    self.dur = dur
+    self.dur = dur      # time in ms
     self._loops = loops
     self.loops = loops
     self.done = done_callback or self.done
@@ -51,7 +51,7 @@ class Animation:
     """
     Do not override. Called once per game frame, and drives animation.
     """
-    self.t += dt/1000 # note: how was this working on rzero before /1000 ???
+    self.t += dt 
 
     frame_ready = self.check_for_next_frame() # checks if ready for next frame
     if frame_ready:
