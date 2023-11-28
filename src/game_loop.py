@@ -33,6 +33,7 @@ class GameClock:
     self.actual_playhead = self.t - self.t0
     wait = self.target_playhead - self.actual_playhead
     if wait > 0:
+      print('waiting ms:', wait*1000)
       time.sleep(wait)
     
     dt = self.t - self.prev_t
