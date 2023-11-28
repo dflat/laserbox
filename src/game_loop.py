@@ -138,14 +138,17 @@ class Game:
     self._running = True
     self.t_game_start = time.time()
     self.clock = GameClock(self.FPS)
+    dts = []
     dt = 1000/self.FPS
     try:
         while True:
           self.update(dt) 
           self.render()
           dt = self.clock.tick(self.FPS)
+          dts.append(dt)
     except KeyboardInterrupt:
         print('goodbye.')
+        print('avg dt:', sum(dts)/len(dts))
     except Exception as e:
         print('raising unhandled exception in game.run:', e)
         raise

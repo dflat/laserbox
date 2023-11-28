@@ -120,6 +120,7 @@ class DummyInputShiftRegister():
         word = 0x00
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                print(sum(dts)/len(dts))
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
@@ -143,7 +144,7 @@ class DummyInputShiftRegister():
         for i in range(16):
             word |= (self.state[i] << i)
         return word
-
+dts=[]
 class Simulator(Game):
     def __init__(self):
         super().__init__(PISOreg=DummyInputShiftRegister(),
@@ -173,9 +174,11 @@ class Simulator(Game):
 
     def run(self):
         self.dt = 1/self.FPS
+        print('hiell')
         while True:
           self.update(self.dt)
           self.render()
           self.dt = self.clock.tick(self.FPS)
+          dts.append(self.dt)
 
 
