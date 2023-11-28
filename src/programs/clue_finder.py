@@ -1,6 +1,7 @@
 from .base import *
 from ..event_loop import *
 from ..animation import Animation, ping_pong, random_k_dance
+from ..config import config
 
 class ClueFinder(Program):
     def __init__(self):
@@ -36,42 +37,51 @@ class ClueFinder(Program):
         for e in events.get_filtered_history(EventType.BUTTON_DOWN, n=max_sequence_length):
             candidate_phrase_word = (e.key, e.state.toggles)
             target_phrase_word = current_clue[phrase_word_index]
-            print('candidate:', candidate_phrase_word, 'target:', target_phrase_word)
+            #print('candidate:', candidate_phrase_word, 'target:', target_phrase_word)
             if candidate_phrase_word == target_phrase_word:
                 phrase_word_index += 1
-                print(f'got word {phrase_word_index} correct.')
+                #print(f'got word {phrase_word_index} correct.')
             if phrase_word_index == (clue_phrase_length):
                 self.clue_success()
 
 
 
     def start(self):
-        print('cluefinder starting...')
+        #print('cluefinder starting...')
         self.game.mixer.use_patch(self.patch_map[0])
         self.game.mixer.load_music('ocean_sounds22050.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
+        self.cooldown_ticks = int(config.FPS*1)
         #self.success_anim = ping_pong(fps=5, loops=3) #Animation(dur=2000, loops=3)
         self.success_anim = random_k_dance(k=3, fps=5, dur=10) #Animation(dur=2000, loops=3)
+        self.cooldowns = { } # button id => tick when triggered
+        self.tick = 0
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
+
+    def check_cooldowns(self):
+        to_free = []
+        for button_id, start_tick in self.cooldowns.items():
+            if self.tick - start_tick > self.cooldown_ticks:
+                to_free.append(button_id)
+        for button_id in to_free:
+            self.cooldowns.pop(button_id)
 
     def update(self, dt):
         """
         Called every frame, whether state has changed or not.
         """
         super().update(dt)
+        self.tick += 1
         # check event loop for input changes
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
-                #print('button down:', event.key)
-                self.game.mixer.play_by_id(event.key)
-                #self.game.lasers.turn_on(event.key)
+                if event.key not in self.cooldowns:
+                    self.game.mixer.play_by_id(event.key)
             elif event.type == EventType.BUTTON_UP:
                 self.check_for_clue_success()
-                #print('button up:', event.key)
-                #self.game.lasers.turn_off(event.key)
 
             elif isinstance(event, ToggleEvent):
                 toggle_state = self.game.input_manager.state.toggles

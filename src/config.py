@@ -2,5 +2,6 @@
 class config:
     PROJECT_ROOT = "../laserbox"
     DEBUG = True
-    FPS = 1000
+    FPS = 500
     START_PROGRAM = "MusicMaker"
+    REGISTER_DELAY = 0
