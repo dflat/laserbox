@@ -1,25 +1,26 @@
 from .base import *
 from ..event_loop import *
+from ..config import config
 import pygame
 import os
 
 class MusicMaker(Program):
     def __init__(self):
         super().__init__()
-        self.patch_map = {  0: 'Instruments_A',
+        self.patch_map = {  0: 'Instruments_A_22050',
                         }
 
     def start(self):
         sr=int(44100/2)
         bitdepth=-16
         channels=1
-        buffer=int(2048//4)
+        buffer=config.AUDIO_BUFFER
         pygame.mixer.quit()
         pygame.mixer.init(sr, bitdepth, channels, buffer)
         print(f'mixer re-initialized by MusicMaker to sr:{sr}, buffer:{buffer}')
         self.game.mixer.use_patch(self.patch_map[0])
-        self.game.mixer.load_effect('Instruments_A_BackingTrack.wav')
-        self.game.mixer.play_effect('Instruments_A_BackingTrack.wav', loops=-1)
+        self.game.mixer.load_effect('Instruments_A_BackingTrack_22050_mono.wav')
+        self.game.mixer.play_effect('Instruments_A_BackingTrack_22050_mono.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
         
