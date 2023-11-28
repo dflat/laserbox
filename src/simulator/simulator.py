@@ -4,9 +4,10 @@ import pygame
 from pygame import Surface
 from pygame.locals import *
 from .. import config
-from ..game_loop import Game, LaserBay
+from ..game_loop import Game, LaserBay, GameClock
 from ..audio_utils import Mixer
 from ..event_loop import events
+from ..config import config
 import numpy as np
 from math import sin, cos, pi
 
@@ -154,7 +155,7 @@ class Simulator(Game):
         self.W = 600
         self.H = 480
         pygame.init()
-        self.clock = pygame.time.Clock()
+        self.clock = GameClock(config.FPS) # pygame.time.Clock()
         self.screen = pygame.display.set_mode((self.W,self.H))
         self.frame = 0
         self.lasers = DummyLaserBay(14)
