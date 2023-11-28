@@ -2,6 +2,7 @@ from .base import *
 from ..event_loop import *
 from ..animation import Animation, ping_pong, random_k_dance
 from ..config import config
+from collections import deque
 
 class ClueFinder(Program):
     def __init__(self):
@@ -52,14 +53,18 @@ class ClueFinder(Program):
         self.game.mixer.load_music('ocean_sounds22050.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
-        self.cooldown_ticks = int(config.FPS*1)
+        self.cooldown_ticks = int(config.FPS*0.25) # quarter-second cooldown after button press
         #self.success_anim = ping_pong(fps=5, loops=3) #Animation(dur=2000, loops=3)
         self.success_anim = random_k_dance(k=3, fps=5, dur=10) #Animation(dur=2000, loops=3)
         self.cooldowns = { } # button id => tick when triggered
+        self.button_down_history = deque(maxlen=100)
         self.tick = 0
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
+
+    def start_cooldown(self, button_id):
+        self.cooldowns[button_id] = self.tick
 
     def check_cooldowns(self):
         to_free = []
@@ -75,11 +80,15 @@ class ClueFinder(Program):
         """
         super().update(dt)
         self.tick += 1
+        self.check_cooldowns()
         # check event loop for input changes
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
                 if event.key not in self.cooldowns:
                     self.game.mixer.play_by_id(event.key)
+                    toggle_state = self.game.input_manager.state.toggles
+                    self.button_down_history.append((event.key, toggle_state))
+                    self.start_cooldown(event.key)
             elif event.type == EventType.BUTTON_UP:
                 self.check_for_clue_success()
 
