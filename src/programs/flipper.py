@@ -8,7 +8,7 @@ class Flipper(Program):
         super().__init__()
         self.default_action = self.button_pressed
 
-    def create_board(self,n=14):
+    def create_board(self,n=6):
         board = [0]*n
         return board
 
