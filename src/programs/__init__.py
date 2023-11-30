@@ -5,3 +5,4 @@ from .clue_finder import ClueFinder
 from .music_maker import MusicMaker
 from .trivia import Trivia
 from .flipper import Flipper
+from .golf import Golf
