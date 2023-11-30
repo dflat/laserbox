@@ -1,5 +1,6 @@
 from .base import *
 from ..event_loop import *
+from ..config import config
 import random
 import time
 import math
@@ -10,8 +11,49 @@ class Golf(Program):
     def __init__(self):
         super().__init__()
         self.remap = [0,13,1,12,2,11,3,10,4,9,5,8] # ascending laser ports from control room
-        #self.remap = dict(zip(range(14),[13,0,12,1,11,2,10,3,9,4,8,5]))
         self.sound_a = 'lasers/00_High.wav'
+        self.patch = 'AcousticPlucksHigh'   # sounds to play as laser "rolls" along increasing "holes"
+        self.blink_fps = 3                  # frequency of "target hole" laser blinks
+        self.blink_duty_cycle = .5          # percent of cycle to keep laser ON
+        self.blink_cycle_ticks = config.FPS/self.blink_fps              # ticks in one duty cycle
+        blink_on_ticks = int(self.blink_duty_cycle*self.blink_cycle_ticks)   # percent of duty cycle ON
+        blink_off_ticks = int((1 - self.blink_duty_cycle)*self.blink_cycle_ticks) # percent of duty OFF
+        print('on_ticks, off_ticks:',blink_on_ticks,blink_off_ticks)
+        self.ticks_to_wait = [blink_off_ticks, blink_on_ticks]         # indexed by toggle flag
+
+    def start(self):
+        print('starting')
+        self.ticks = 0
+        self.blink_on = True
+        self.word = 0
+        self.prev_word = None
+        self.last_blink_toggle = 0
+        self.game.mixer.load_effect(self.sound_a)
+        self.game.mixer.use_patch(self.patch)
+        self.reset()
+
+    def reset(self,goal=13):
+        self.swinging = False
+        self.rolling = False
+        self.max_roll_time = 5
+        self.prev_displacement_index = -1
+        self.goal = goal
+        self.roll_port_index = 0
+        print("goal:",self.goal)
+        self.set_word(0)
+
+    def update_blink_animation(self):
+        """
+        Called every frame to control blinking rate of "target hole"
+        """
+        elapsed_ticks = self.ticks - self.last_blink_toggle
+        if elapsed_ticks >= self.ticks_to_wait[self.blink_on]:
+            self.blink_on = not self.blink_on
+            self.last_blink_toggle = self.ticks
+            #if not (self.swinging or self.rolling):
+            #    self.set_word(0)
+            self.refresh_word() # blink even if no one is calling set_word (e.g. in waiting state)
+            #self.game.lasers.set_value(self.goal, self.blink_on)
 
     def get_velocity(self,t, max_v=20,max_pow=12.9):
         s = 0.5 + 0.5*sin(2*pi*t/2 - pi/2)
@@ -29,20 +71,6 @@ class Golf(Program):
     def play_laser_sound(self):
         self.game.mixer.play_effect(self.sound_a)
 
-    def start(self):
-        print('starting')
-        self.game.mixer.load_effect(self.sound_a)
-        self.reset()
-
-    def reset(self,goal=13):
-        self.swinging = False
-        self.rolling = False
-        self.max_roll_time = 5
-        self.prev_displacement_index = 0
-        self.goal = goal
-        print("goal:",self.goal)
-        self.set_word(0)
-
     def start_swinging(self):
         print(inspect.stack()[0][3])
         self.swinging = True
@@ -57,6 +85,7 @@ class Golf(Program):
         print(inspect.stack()[0][3])
         self.set_word(0, with_target = False)
         self.stop_rolling()
+        self.play_laser_sound()
 
     def start_rolling(self):
         print(inspect.stack()[0][3])
@@ -68,9 +97,14 @@ class Golf(Program):
         self.rolling = False
 
     def set_word(self, word, with_target = True):
-        if with_target:
+        self.prev_word = word # cache word without goal bit or'd in
+        if with_target and self.blink_on:
             word |= 2**self.goal
+        #print('set word:', word)
         self.game.lasers.set_word(word)
+
+    def refresh_word(self):
+        self.set_word(self.prev_word)
 
     def grade_roll(self,displacement_index):
         error = abs(self.goal - displacement_index)
@@ -88,9 +122,9 @@ class Golf(Program):
             self.fall_off()
         elif displacement_index > self.prev_displacement_index:
             # ball has advanced forward
-            print(f'****{displacement_index}****')
-            self.play_laser_sound()
-            self.set_word(1<<displacement_index)
+            print(f'**{displacement_index}**')
+            self.game.mixer.play_by_id(displacement_index, duck=False)
+            self.set_word(1 << displacement_index)
             self.prev_displacement_index = displacement_index
 
         elif roll_time > self.max_roll_time:
@@ -102,6 +136,8 @@ class Golf(Program):
         Called every frame, whether state has changed or not.
         """
         super().update(dt)
+        self.update_blink_animation()
+        self.ticks += 1
         # check event loop for input changes
         if self.swinging:
             self.get_velocity(time.time() - self.swing_start)
