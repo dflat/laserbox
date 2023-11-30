@@ -9,10 +9,12 @@ from math import sin, pi, floor
 class Golf(Program):
     def __init__(self):
         super().__init__()
-        self.remap = dict(zip(range(14),[13,0,12,1,11,2,10,3,9,4,8,5]))
+        self.remap = [0,13,1,12,2,11,3,10,4,9,5,8] # ascending laser ports from control room
+        #self.remap = dict(zip(range(14),[13,0,12,1,11,2,10,3,9,4,8,5]))
+        self.sound_a = 'lasers/00_High.wav'
 
     def get_velocity(self,t, max_v=20,max_pow=12.9):
-        s = 0.5 + 0.5*sin(2*pi*t/5 - pi/2)
+        s = 0.5 + 0.5*sin(2*pi*t/2 - pi/2)
         self.power_index = floor(max_pow*s)
         #print(self.power_index)
         self.v = max_v*s
@@ -24,8 +26,12 @@ class Golf(Program):
             return None
         return index
 
+    def play_laser_sound(self):
+        self.game.mixer.play_effect(self.sound_a)
+
     def start(self):
         print('starting')
+        self.game.mixer.load_effect(self.sound_a)
         self.reset()
 
     def reset(self,goal=13):
@@ -81,7 +87,9 @@ class Golf(Program):
         if displacement_index is None: #ball has rolled off the edge
             self.fall_off()
         elif displacement_index > self.prev_displacement_index:
+            # ball has advanced forward
             print(f'****{displacement_index}****')
+            self.play_laser_sound()
             self.set_word(1<<displacement_index)
             self.prev_displacement_index = displacement_index
 
@@ -97,7 +105,7 @@ class Golf(Program):
         # check event loop for input changes
         if self.swinging:
             self.get_velocity(time.time() - self.swing_start)
-            self.set_word(sum(2**i for i in list(self.remap.values())[:self.power_index]))
+            self.set_word(sum(2**i for i in self.remap[:self.power_index]))
         elif self.rolling:
             self.roll()
         for event in events.get():
