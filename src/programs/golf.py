@@ -13,6 +13,7 @@ from heapq import heappush, heappop
 class Golf(Program):
     def __init__(self):
         super().__init__()
+        self.buttons = [0,1,2,3,4,5] # allow any of these to trigger swing
         self.remap = [0,13,1,12,2,11,3,10,4,9,5,8] # ascending laser ports from control room
         self.init_sound_feedback()
         self.init_blink_duty_cycle()
@@ -157,7 +158,7 @@ class Golf(Program):
     def celebrate(self):
         print('you won!')
         # say 'starting new round (TODO)'
-        self.after(1000, self.reset, random.randint(8,13))
+        self.after(3000, self.reset, random.randint(8,13))
 
     def play_voice_feedback(self, displacement_index):
         if displacement_index is None:
@@ -237,14 +238,14 @@ class Golf(Program):
             if event.type == EventType.BUTTON_DOWN:
                 print('button down fired')
                 # todo: have a cooldown here
-                if event.key == 0 and not (self.swinging or self.rolling or self.grading):
+                if event.key in self.buttons and not (self.swinging or self.rolling or self.grading):
                     self.start_swinging()
                 else:
                     continue
                     
             elif event.type == EventType.BUTTON_UP:
                 # todo: maybe a cancel timeout here to stop up-jitter
-                if event.key == 0 and self.swinging and not (self.rolling or self.grading): 
+                if event.key in self.buttons and self.swinging and not (self.rolling or self.grading): 
                     self.stop_swinging()
                     self.start_rolling()
 
