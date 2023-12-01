@@ -74,22 +74,22 @@ class DummyLaserBay(LaserBay):
         self._init_objects()
 
     def _init_objects(self):
-        top, left = 100, 100
         OFFSET = LaserPort.W/2 + LaserPort.PAD/2
         FLOOR_W = LaserPort.W*2 + LaserPort.PAD*3
         FLOOR_H = LaserPort.W*6 + LaserPort.PAD*7
+        top, left = 100, (config.SIM_SCREEN_WH[0] - FLOOR_H) // 2
         PORT_IDS = [6,7,5,4,3,2,1,0,8,9,10,11,12,13]#[7,6,8,9,10,11,12,13,5,4,3,2,1,0]
         # numbering starts at 0 being bottom left, and wraps around counter-clockwise to 13
         for i in range(2):
             for j in range(6):
-                x = left + (LaserPort.W + LaserPort.PAD)*j + i*OFFSET
+                x = left + (LaserPort.W + LaserPort.PAD)*j - i*OFFSET
                 y = top + FLOOR_W*i
                 direction = (0, (-1)**(i))
                 port_id = PORT_IDS.pop()
                 laser = LaserPort(pos=(x,y), direction=direction, laser_length=FLOOR_W, port_id=port_id)
                 self.lasers[port_id] = laser
         for k in range(2):
-            x1 = x + LaserPort.PAD
+            x1 = x + LaserPort.PAD*2
             y = top + (FLOOR_W - 2*LaserPort.H)/2*(k+1)
             direction = (-1, 0)
             port_id = PORT_IDS.pop()
@@ -152,8 +152,7 @@ class Simulator(Game):
                          SIPOreg=DummyOutputShiftRegister(),
                          mixer=Mixer(),
                          events=events)
-        self.W = 600
-        self.H = 480
+        self.W, self.H = config.SIM_SCREEN_WH
         pygame.init()
         self.clock = GameClock(config.FPS) # pygame.time.Clock()
         self.screen = pygame.display.set_mode((self.W,self.H))
