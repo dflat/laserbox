@@ -22,7 +22,7 @@ class GameClock:
     self.t0 = time.time()
     self.t = self.t0
     self.prev_t = self.t0
-    self.frame = 1
+    self.frame = 0
     self.target_playhead = 0
     self.actual_playhead = 0
     self.dt_history = deque(maxlen=60*10)

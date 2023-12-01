@@ -8,6 +8,7 @@ import math
 import inspect
 import pygame
 from math import sin, pi, floor
+from heapq import heappush, heappop
 
 class Golf(Program):
     def __init__(self):
@@ -15,6 +16,7 @@ class Golf(Program):
         self.remap = [0,13,1,12,2,11,3,10,4,9,5,8] # ascending laser ports from control room
         self.init_sound_feedback()
         self.init_blink_duty_cycle()
+        self.init_scheduler()
 
     def init_sound_feedback(self):
         self.music = 'Golf2Slow.wav'
@@ -41,6 +43,7 @@ class Golf(Program):
     def start(self):
         print('starting')
         self.ticks = 0
+        self.program_t = 0
         self.blink_on = True
         self.word = 0
         self.prev_word = None
@@ -55,8 +58,10 @@ class Golf(Program):
 
     def reset(self, goal=13, tries_left=3):
         self.tries_left = tries_left
+        print('tries left:', tries_left)
         self.swinging = False
         self.rolling = False
+        self.grading = False
         self.max_roll_time = 5
         self.prev_displacement_index = -1
         self.goal = goal
@@ -123,22 +128,36 @@ class Golf(Program):
     def fall_off(self):
         print(inspect.stack()[0][3])
         self.set_word(0, with_target = False)
-        self.stop_rolling()
         self.game.mixer.play_effect(self.sound_a)
 
-    def grade_roll(self,displacement_index):
-        self.play_voice_feedback(displacement_index)
-        if displacement_index == self.goal:
-            self.celebrate()
-        elif self.tries_left > 0:
-            #self.reset(self.goal, self.tries_left-1)
-            pass
-        else:
-            # missed all tries, round over
-            print('you lost this round.')
+    def init_scheduler(self):
+        self.schedule_id = 0
+        self.scheduler = [] # heap
+
+    def after(self, ms, func, *args, **kwargs):
+        deadline = time.time() + ms/1000
+        f = lambda: func(*args, **kwargs)
+        heappush(self.scheduler, (deadline, self.schedule_id, f))
+        self.schedule_id += 1
+
+    def check_schedule(self):
+        if self.scheduler:
+            now = time.time()
+            while self.scheduler:
+                nearest_deadline, sched_id, func = heappop(self.scheduler)
+                if now - nearest_deadline > 0:
+                    # deadline has past, call func
+                    print('calling scheduled func with id #', sched_id)
+                    func()
+                else:
+                    # no func is ready to be called
+                    heappush(self.scheduler, (nearest_deadline, sched_id, func))
+                    break
 
     def celebrate(self):
         print('you won!')
+        # say 'starting new round (TODO)'
+        self.after(1000, self.reset, random.randint(8,13))
 
     def play_voice_feedback(self, displacement_index):
         if displacement_index is None:
@@ -180,8 +199,22 @@ class Golf(Program):
             # ball has come to a stop.
             # note: should there be a delay here?
             print('reached end port (ball stopped) at:', displacement_index)
-            self.stop_rolling()
             self.grade_roll(displacement_index)
+
+    def grade_roll(self,displacement_index):
+        self.stop_rolling()
+        self.grading = True
+        self.play_voice_feedback(displacement_index)
+        if displacement_index == self.goal:
+            self.celebrate()
+        elif self.tries_left > 1:
+            # go on to next try for this round
+            self.after(1000, self.reset, self.goal, self.tries_left-1)
+        else:
+            # missed all tries, round over
+            print('You lost this round. Starting new round.')
+            self.after(1000, self.reset, random.randint(8,13))
+
 
 
 
@@ -191,7 +224,9 @@ class Golf(Program):
         """
         super().update(dt)
         self.update_blink_animation()
+        self.check_schedule()
         self.ticks += 1
+        self.program_t += dt
         # check event loop for input changes
         if self.swinging:
             self.get_velocity(time.time() - self.swing_start)
@@ -200,15 +235,16 @@ class Golf(Program):
             self.roll()
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
+                print('button down fired')
                 # todo: have a cooldown here
-                if event.key == 0 and not (self.swinging or self.rolling):
+                if event.key == 0 and not (self.swinging or self.rolling or self.grading):
                     self.start_swinging()
                 else:
                     continue
                     
             elif event.type == EventType.BUTTON_UP:
                 # todo: maybe a cancel timeout here to stop up-jitter
-                if event.key == 0 and not self.rolling: 
+                if event.key == 0 and self.swinging and not (self.rolling or self.grading): 
                     self.stop_swinging()
                     self.start_rolling()
 
