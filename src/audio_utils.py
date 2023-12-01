@@ -28,10 +28,10 @@ class Mixer:
         self.use_patch('numbers')
         self.fps = self.FPS
 
-    def load_music(self, filename, loops=-1):
+    def load_music(self, filename, loops=-1, fade_ms=0):
         path = os.path.join(self.MUSIC_DIR, filename)
         pygame.mixer.music.load(path)
-        pygame.mixer.music.play(loops=loops)
+        pygame.mixer.music.play(loops=loops, fade_ms=fade_ms)
 
     def play_effect(self, filename, loops=0):
         if filename not in self.effects:

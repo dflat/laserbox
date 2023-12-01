@@ -151,17 +151,22 @@ class Game:
     except KeyboardInterrupt:
         print('goodbye.')
         print('avg dt:', sum(dts)/len(dts))
-    except Exception as e:
-        print('raising unhandled exception in game.run:', e)
-        raise
-    finally:
         self.quit()
+    except Exception as e:
+        self.cleanup()
+        raise RuntimeError('crashed...') from e
+    #finally:
+    #    self.quit()
     
-  def quit(self):
+  def cleanup(self):
     self._running = False
-    pygame.quit()
     GPIO.cleanup()
-    print('cleaned up and quitting.')
+    print('cleaned up.')
+
+  def quit(self):
+    self.cleanup()
+    pygame.quit()
+    print('quitting.')
     sys.exit()
 
 if __name__ == "__main__":
