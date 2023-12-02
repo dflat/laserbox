@@ -19,7 +19,9 @@ class Golf(Program):
 
     def init_sound_feedback(self):
         self.music = 'Golf2Slow.wav'
-        self.sound_a = 'splash.wav'
+        self.fall_off_sound = 'splash.wav'
+        self.advance_port_sound = os.path.join('positive', 'arcade_plus_one.wav')
+        self.win_sound = os.path.join('positive', 'hooray.wav')
         self.patch = 'kicks_ascending'   # sounds to play as laser "rolls" along increasing "holes"
         self.voice_feedback = [os.path.join('golf_feedback', name) for name in (
             'trin_perfect.wav',
@@ -48,8 +50,10 @@ class Golf(Program):
         self.release_pending = { } # used for anti-jitter protection on physical button release
         self.last_blink_toggle = 0
         pygame.mixer.music.set_volume(1)
-        self.game.mixer.load_music(self.music, fade_ms=1000)
-        self.game.mixer.load_effect(self.sound_a)
+        self.game.mixer.load_music(self.music, fade_ms=2000)
+        self.game.mixer.load_effect(self.fall_off_sound, volume=0.7)
+        self.game.mixer.load_effect(self.win_sound, volume=0.6)
+        self.game.mixer.load_effect(self.advance_port_sound, volume=0.3)
         for feedback in self.voice_feedback:
             self.game.mixer.load_effect(feedback)
         self.game.mixer.use_patch(self.patch)
@@ -133,12 +137,13 @@ class Golf(Program):
     def fall_off(self):
         print(inspect.stack()[0][3])
         self.set_word(0, with_target = False)
-        self.game.mixer.play_effect(self.sound_a)
+        self.game.mixer.play_effect(self.fall_off_sound)
 
     def celebrate(self):
         print('you won!')
-        # say 'starting new round (TODO)'
+        self.game.mixer.play_effect(self.win_sound)
         self.after(3000, self.reset, random.randint(8,13))
+        # say 'starting new round (TODO)'
 
     def play_voice_feedback(self, displacement_index):
         if displacement_index is None:
@@ -172,6 +177,7 @@ class Golf(Program):
             # ball has advanced forward one space.
             print(f'**{displacement_index}**')
             self.game.mixer.play_by_id(displacement_index, duck=False)
+            #self.game.mixer.play_effect(self.advance_port_sound)
             self.set_word(1 << displacement_index)
             self.prev_displacement_index = displacement_index
 
@@ -231,19 +237,23 @@ class Golf(Program):
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
                 print('button down fired')
+                if self.release_pending.get(event.key):
+                    # button re-engaged in release anti-jitter interval; cancel pending swing release
+                    print('*cancelled pending swing release*')
+                    self.release_pending.pop(event.key)
                 if event.key in self.buttons and not (self.swinging or self.rolling or self.grading):
                     self.start_swinging()
                     
             elif event.type == EventType.BUTTON_UP:
+                print('button up fired')
                 # anti-jitter protection
                 if event.key in self.buttons and self.swinging and not (self.rolling or self.grading): 
                     # make sure no release is currently pending
                     if self.release_pending:
                         continue
                     else:
-                        self.release_pending[event.key] = self.tick + int(config.FPS*0.1) # 100 ms anti-jitter
-
-
+                        self.release_pending[event.key] = (self.tick +
+                                                        int(config.FPS*config.ANTI_JITTER_DELAY))
 
             elif isinstance(event, ToggleEvent):
                 toggle_state = self.game.input_manager.state.toggles

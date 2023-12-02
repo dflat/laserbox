@@ -7,7 +7,8 @@ class config:
     	FPS = 800
     else:
 	    FPS = 60
-    AUDIO_BUFFER = 2048
-    START_PROGRAM = "MusicMaker"
-    REGISTER_DELAY = 0
-    SIM_SCREEN_WH = 600,480
+    AUDIO_BUFFER = 2048         # samples
+    START_PROGRAM = "MusicMaker"# class name
+    REGISTER_DELAY = 0          # seconds
+    SIM_SCREEN_WH = 600,480     # pixels
+    ANTI_JITTER_DELAY = .05      # seconds
