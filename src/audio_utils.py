@@ -38,9 +38,11 @@ class Mixer:
             self.load_effect(filename)
         self.effects[filename].play(loops=loops)
 
-    def load_effect(self, filename):
+    def load_effect(self, filename, volume=1):
         path = os.path.join(self.EFFECTS_DIR, filename)
-        self.effects[filename] = Sound(path)
+        sound = Sound(path)
+        sound.set_volume(volume)
+        self.effects[filename] = sound
 
     def set_music_volume(self, vol):
         pygame.mixer.music.set_volume(vol)
@@ -90,12 +92,12 @@ class Mixer:
             time.sleep(fade_dur/fps)
         pygame.mixer.music.set_volume(end_vol)
 
-    def use_patch(self, patch_name):
+    def use_patch(self, patch_name, volume=1):
         if patch_name not in self.patches:
-            self._load_patch(patch_name)
+            self._load_patch(patch_name, volume)
         self.patch = self.patches[patch_name]
 
-    def _load_patch(self, patch_name):
+    def _load_patch(self, patch_name, volume=1):
         """
         patch_name should be the name of the directory containing 14 wav files
             and placed in PATCH_DIR.
@@ -103,6 +105,8 @@ class Mixer:
         """
         patch_path = os.path.join(self.PATCH_DIR, patch_name)
         patch = [Sound(f.path) for f in sorted(os.scandir(patch_path), key=lambda p:p.name)] 
+        for sound in patch:
+            sound.set_volume(volume)
         self.patches[patch_name] = patch
         
 #import simpleaudio as sa
