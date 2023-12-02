@@ -53,34 +53,20 @@ class ClueFinder(Program):
         self.game.mixer.load_music('ocean_sounds22050.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
-        self.cooldown_ticks = int(config.FPS*0.25) # quarter-second cooldown after button press
         #self.success_anim = ping_pong(fps=5, loops=3) #Animation(dur=2000, loops=3)
         self.success_anim = random_k_dance(k=3, fps=5, dur=10) #Animation(dur=2000, loops=3)
-        self.cooldowns = { } # button id => tick when triggered
         self.button_down_history = deque(maxlen=100)
-        self.tick = 0
         
     def button_pressed(self, state: State):
         print('clue finder got:', state, int(state))
 
-    def start_cooldown(self, button_id):
-        self.cooldowns[button_id] = self.tick
-
-    def check_cooldowns(self):
-        to_free = []
-        for button_id, start_tick in self.cooldowns.items():
-            if self.tick - start_tick > self.cooldown_ticks:
-                to_free.append(button_id)
-        for button_id in to_free:
-            self.cooldowns.pop(button_id)
 
     def update(self, dt):
         """
         Called every frame, whether state has changed or not.
         """
         super().update(dt)
-        self.tick += 1
-        self.check_cooldowns()
+        #self.tick += 1 moved to base class
         # check event loop for input changes
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:

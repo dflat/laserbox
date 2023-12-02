@@ -189,6 +189,10 @@ class Animation:
     """
     return min(b, a + x*(b-a))
 
+class ThreadedAnimation:
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+
 # example Animation factories
 def ping_pong(fps=5, loops=3):
   word_frames =  [2**i for i in range(14)] + [2**i for i in reversed(range(1,13))]

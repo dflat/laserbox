@@ -175,6 +175,9 @@ class Program:
     schedule_id = 0
     scheduler = [] # heap
   
+    cooldown_ticks = int(config.FPS*0.25) # quarter-second cooldown after button press
+    cooldowns = { } # button id => tick when triggered
+
     system_triggers = { } # TODO .. enter SystemSettings, enter GameSelect modes
     triggers = { }
 
@@ -185,17 +188,24 @@ class Program:
                                     State.from_list(buttons=[6], toggles=(1,1))],
                                     maxlen=6)
         StateMachine.register_program(self) 
+        self._tick = 0
 
+    @property
+    def tick(self):
+      return self._tick
+    
     def update(self, dt):
         """
         Called once per frame. Subclass in user program.
         """
         #TODO process system_triggers here (subclass should call super())
+        self.check_cooldowns()
         if self.input_manager.changed_state:
             pass
             #state = input_manager.state
             #action = self.triggers.get(state, self.default_action)
             #action(state)
+        self._tick += 1
 
     def start(self):
       """
@@ -230,6 +240,17 @@ class Program:
                     # no func is ready to be called
                     heappush(self.scheduler, (nearest_deadline, sched_id, func))
                     break
+
+    def start_cooldown(self, button_id):
+        self.cooldowns[button_id] = self.tick
+
+    def check_cooldowns(self):
+        to_free = []
+        for button_id, start_tick in self.cooldowns.items():
+            if self.tick - start_tick > self.cooldown_ticks:
+                to_free.append(button_id)
+        for button_id in to_free:
+            self.cooldowns.pop(button_id)
 
     def match_triggers(self, state):
         # match any single-state trigger
