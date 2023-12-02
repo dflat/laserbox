@@ -63,7 +63,7 @@ class Golf(Program):
             self.game.mixer.load_effect(feedback)
         self.game.mixer.use_patch(self.patch)
         congrats_dur = self.game.mixer.effects[self.congrats_sound].get_length()
-        self.win_animation = random_k_dance(k=3, fps=8, dur=int(congrats_dur))
+        self.win_animation = random_k_dance(k=3, fps=8, dur=max(0,int(congrats_dur)-1))
         self.reset()
 
     def reset(self, goal=13, tries_left=3):
@@ -106,7 +106,7 @@ class Golf(Program):
         return index
 
     def start_swinging(self):
-        print(inspect.stack()[0][3])
+        #print(inspect.stack()[0][3])
         self.swinging = True
         self.swing_start = time.time()
 
@@ -114,7 +114,7 @@ class Golf(Program):
         if not self.swinging:
             print('erroneous call to stop_swinging ignored.')
             return
-        print(inspect.stack()[0][3])
+        #print(inspect.stack()[0][3])
         self.swinging = False
         self.set_word(0)
         self.end_displacement_index = self.get_displacement_index(t=self.max_roll_time)
@@ -123,12 +123,12 @@ class Golf(Program):
         if self.rolling:
             print('erroneous call to start_rolling ignored.')
             return
-        print(inspect.stack()[0][3])
+        #print(inspect.stack()[0][3])
         self.rolling = True
         self.roll_start = time.time()
 
     def stop_rolling(self):
-        print(inspect.stack()[0][3])
+        #print(inspect.stack()[0][3])
         self.rolling = False
 
     def set_word(self, word, with_target = True):
