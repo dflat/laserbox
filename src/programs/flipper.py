@@ -3,6 +3,7 @@ from ..event_loop import *
 from ..animation import random_k_dance
 import random
 import time
+import os
 
 
 class Flipper(Program):
@@ -48,7 +49,7 @@ class Flipper(Program):
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
 
-        self.win_sound = 'congrats_extended.wav'
+        self.win_sound = os.path.join('positive', 'congrats_extended.wav')
         self.game.mixer.load_effect(self.win_sound)
         self.win_dur = self.game.mixer.effects[self.win_sound].get_length()
         self.win_animation = random_k_dance(k=3,fps=6 , dur=self.win_dur - 1.2)
