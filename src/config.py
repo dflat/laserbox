@@ -12,3 +12,7 @@ class config:
     REGISTER_DELAY = 0          # seconds
     SIM_SCREEN_WH = 600,480     # pixels
     ANTI_JITTER_DELAY = .05      # seconds
+    CONGRATS_VOL = 0.75
+
+    class Flipper:
+    	START_BOARD = [1,0,0,1,0,0]

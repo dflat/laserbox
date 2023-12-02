@@ -147,7 +147,7 @@ class StateMachine:
       cls.PROGRAMS[program.__class__.__name__] = program
       print('registered', program.__class__.__name__)
 
-  def swap_program(self, program_name):
+  def swap_program(self, program_name: str):
     """
     change the active program, and give it references
     to input_manager and game objects.
@@ -216,6 +216,10 @@ class Program:
       Called the first time program is loaded.
       """
       return RuntimeError('override this method in subclass')
+
+    def quit(self, next_program=None):
+      print('Program base class quit method called.')
+      pass
 
     def make_active_program(self, game):
         self.game = game

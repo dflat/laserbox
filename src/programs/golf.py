@@ -58,7 +58,7 @@ class Golf(Program):
         self.game.mixer.load_effect(self.fall_off_sound, volume=0.5)
         self.game.mixer.load_effect(self.win_sound, volume=0.4)
         self.game.mixer.load_effect(self.advance_port_sound, volume=0.3)
-        self.game.mixer.load_effect(self.congrats_sound, volume=0.75)
+        self.game.mixer.load_effect(self.congrats_sound, volume=config.CONGRATS_VOL)
         for feedback in self.voice_feedback:
             self.game.mixer.load_effect(feedback)
         self.game.mixer.use_patch(self.patch)
