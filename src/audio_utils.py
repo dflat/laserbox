@@ -5,6 +5,16 @@ import subprocess
 import time
 import threading
 from .config import config
+from .event_loop import SoundEndEvent, events
+
+
+#class GameChannel(pygame.mixer.Channel):
+    # WIP
+#    def set_endevent(self, pg_evt_type):
+#        super().set_endevent(pg_evt_type)
+#        events.put(SoundEndEvent()) # not here..look in source for when event is pushed
+#        print('set endevent for channel')
+
 
 class Mixer:
     MUSIC_DIR = os.path.join(config.PROJECT_ROOT, 'assets', 'music')

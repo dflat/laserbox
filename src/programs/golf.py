@@ -1,6 +1,7 @@
 from .base import *
 from ..event_loop import *
 from ..config import config
+from ..animation import random_k_dance 
 import random
 import os
 import time
@@ -22,6 +23,7 @@ class Golf(Program):
         self.fall_off_sound = 'splash.wav'
         self.advance_port_sound = os.path.join('positive', 'arcade_plus_one.wav')
         self.win_sound = os.path.join('positive', 'hooray.wav')
+        self.congrats_sound = os.path.join('positive', 'congrats_extended.wav')
         self.patch = 'kicks_ascending'   # sounds to play as laser "rolls" along increasing "holes"
         self.voice_feedback = [os.path.join('golf_feedback', name) for name in (
             'trin_perfect.wav',
@@ -49,14 +51,19 @@ class Golf(Program):
         self.prev_word = None
         self.release_pending = { } # used for anti-jitter protection on physical button release
         self.last_blink_toggle = 0
+        self.goals_scored = 0
+        self.goals_to_complete = 1
         pygame.mixer.music.set_volume(1)
         self.game.mixer.load_music(self.music, fade_ms=2000)
-        self.game.mixer.load_effect(self.fall_off_sound, volume=0.7)
-        self.game.mixer.load_effect(self.win_sound, volume=0.6)
+        self.game.mixer.load_effect(self.fall_off_sound, volume=0.5)
+        self.game.mixer.load_effect(self.win_sound, volume=0.4)
         self.game.mixer.load_effect(self.advance_port_sound, volume=0.3)
+        self.game.mixer.load_effect(self.congrats_sound, volume=0.75)
         for feedback in self.voice_feedback:
             self.game.mixer.load_effect(feedback)
         self.game.mixer.use_patch(self.patch)
+        congrats_dur = self.game.mixer.effects[self.congrats_sound].get_length()
+        self.win_animation = random_k_dance(k=3, fps=8, dur=int(congrats_dur))
         self.reset()
 
     def reset(self, goal=13, tries_left=3):
@@ -69,7 +76,7 @@ class Golf(Program):
         self.prev_displacement_index = -1
         self.goal = goal
         self.roll_port_index = 0
-        print("goal:",self.goal)
+        print("new goal is:",self.goal)
         self.set_word(0)
 
     def update_blink_animation(self):
@@ -141,9 +148,20 @@ class Golf(Program):
 
     def celebrate(self):
         print('you won!')
+        self.goals_scored += 1
         self.game.mixer.play_effect(self.win_sound)
-        self.after(3000, self.reset, random.randint(8,13))
+        if self.goals_scored >= self.goals_to_complete:
+            pygame.mixer.music.fadeout(3000)
+            self.after(1000, self.complete)
         # say 'starting new round (TODO)'
+        else:
+            self.after(3000, self.reset, random.randint(8,13))
+
+    def complete(self):
+        self.game.mixer.play_effect(self.congrats_sound)
+        self.win_animation.start()
+        print('game complete...')
+        #self.advance_program_or_exit() # TODO
 
     def play_voice_feedback(self, displacement_index):
         if displacement_index is None:
