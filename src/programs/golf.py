@@ -41,7 +41,6 @@ class Golf(Program):
 
     def start(self):
         print('starting')
-        self.ticks = 0
         self.program_t = 0
         self.blink_on = True
         self.word = 0
@@ -72,10 +71,10 @@ class Golf(Program):
         """
         Called every frame to control blinking rate of "target hole"
         """
-        elapsed_ticks = self.ticks - self.last_blink_toggle
+        elapsed_ticks = self.tick - self.last_blink_toggle
         if elapsed_ticks >= self.ticks_to_wait[self.blink_on]:
             self.blink_on = not self.blink_on
-            self.last_blink_toggle = self.ticks
+            self.last_blink_toggle = self.tick
             #if not (self.swinging or self.rolling):
             #    self.set_word(0)
             self.refresh_word() # blink even if no one is calling set_word (e.g. in waiting state)
@@ -200,7 +199,6 @@ class Golf(Program):
         super().update(dt)
         self.update_blink_animation()
         self.check_schedule()
-        self.ticks += 1
         self.program_t += dt
         # check event loop for input changes
         if self.swinging:
