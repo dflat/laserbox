@@ -45,6 +45,7 @@ class Golf(Program):
         self.blink_on = True
         self.word = 0
         self.prev_word = None
+        self.release_pending = { } # used for anti-jitter protection on physical button release
         self.last_blink_toggle = 0
         pygame.mixer.music.set_volume(1)
         self.game.mixer.load_music(self.music, fade_ms=1000)
@@ -99,12 +100,18 @@ class Golf(Program):
         self.swing_start = time.time()
 
     def stop_swinging(self):
+        if not self.swinging:
+            print('erroneous call to stop_swinging ignored.')
+            return
         print(inspect.stack()[0][3])
         self.swinging = False
         self.set_word(0)
         self.end_displacement_index = self.get_displacement_index(t=self.max_roll_time)
 
     def start_rolling(self):
+        if self.rolling:
+            print('erroneous call to start_rolling ignored.')
+            return
         print(inspect.stack()[0][3])
         self.rolling = True
         self.roll_start = time.time()
@@ -189,7 +196,21 @@ class Golf(Program):
             print('You lost this round. Starting new round.')
             self.after(1000, self.reset, random.randint(8,13))
 
-
+    def release_pending_buttons(self): 
+        """
+        Used for anti-jitter protection upon physical button release.
+        Adds a small delay before triggering actions based on button releases.
+        """
+        to_release = []
+        for key, deadline in self.release_pending.items():
+            if self.tick - deadline > 0:
+                # deadline has passed, trigger action
+                to_release.append(key)
+                self.stop_swinging()
+                self.start_rolling()
+        for key in to_release:
+            print('realeasing', key)
+            self.release_pending.pop(key)
 
 
     def update(self, dt):
@@ -199,29 +220,36 @@ class Golf(Program):
         super().update(dt)
         self.update_blink_animation()
         self.program_t += dt
-        # check event loop for input changes
+
         if self.swinging:
             self.get_velocity(time.time() - self.swing_start)
             self.set_word(sum(2**i for i in self.remap[:self.power_index]))
+
         elif self.rolling:
             self.roll()
+
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
                 print('button down fired')
-                # todo: have a cooldown here
                 if event.key in self.buttons and not (self.swinging or self.rolling or self.grading):
                     self.start_swinging()
-                else:
-                    continue
                     
             elif event.type == EventType.BUTTON_UP:
-                # todo: maybe a cancel timeout here to stop up-jitter
+                # anti-jitter protection
                 if event.key in self.buttons and self.swinging and not (self.rolling or self.grading): 
-                    self.stop_swinging()
-                    self.start_rolling()
+                    # make sure no release is currently pending
+                    if self.release_pending:
+                        continue
+                    else:
+                        self.release_pending[event.key] = self.tick + int(config.FPS*0.1) # 100 ms anti-jitter
+
+
 
             elif isinstance(event, ToggleEvent):
                 toggle_state = self.game.input_manager.state.toggles
                 self.reset(random.randint(8,13))
+
+        # anti-jitter protection
+        self.release_pending_buttons()
 
 Golf()
