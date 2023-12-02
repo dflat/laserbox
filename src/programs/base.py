@@ -3,8 +3,13 @@ base.py
 
 All programs should subclasss Program, and be put in this (program) directory.
 """
+
 __all__ = ['State', 'StateSequence', 'StateMachine', 'Program']
+
+import time
+from heapq import heappush, heappop
 from ..config import config
+
 ###########################
 ###    STATE MACHINE    ###
 #                         #
@@ -167,6 +172,8 @@ class Program:
     and default_action, process_input overridden.
     input_manager will be set by StateMachine.
     """
+    schedule_id = 0
+    scheduler = [] # heap
   
     system_triggers = { } # TODO .. enter SystemSettings, enter GameSelect modes
     triggers = { }
@@ -202,6 +209,27 @@ class Program:
         self.start()
         if config.DEBUG:
             print('loaded program: ', self.__class__.__name__)
+
+
+    def after(self, ms, func, *args, **kwargs):
+        deadline = time.time() + ms/1000
+        f = lambda: func(*args, **kwargs)
+        heappush(self.scheduler, (deadline, self.schedule_id, f))
+        self.schedule_id += 1
+
+    def check_schedule(self):
+        if self.scheduler:
+            now = time.time()
+            while self.scheduler:
+                nearest_deadline, sched_id, func = heappop(self.scheduler)
+                if now - nearest_deadline > 0:
+                    # deadline has past, call func
+                    print('calling scheduled func with id #', sched_id)
+                    func()
+                else:
+                    # no func is ready to be called
+                    heappush(self.scheduler, (nearest_deadline, sched_id, func))
+                    break
 
     def match_triggers(self, state):
         # match any single-state trigger

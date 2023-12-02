@@ -8,7 +8,6 @@ import math
 import inspect
 import pygame
 from math import sin, pi, floor
-from heapq import heappush, heappop
 
 class Golf(Program):
     def __init__(self):
@@ -17,7 +16,6 @@ class Golf(Program):
         self.remap = [0,13,1,12,2,11,3,10,4,9,5,8] # ascending laser ports from control room
         self.init_sound_feedback()
         self.init_blink_duty_cycle()
-        self.init_scheduler()
 
     def init_sound_feedback(self):
         self.music = 'Golf2Slow.wav'
@@ -130,30 +128,6 @@ class Golf(Program):
         print(inspect.stack()[0][3])
         self.set_word(0, with_target = False)
         self.game.mixer.play_effect(self.sound_a)
-
-    def init_scheduler(self):
-        self.schedule_id = 0
-        self.scheduler = [] # heap
-
-    def after(self, ms, func, *args, **kwargs):
-        deadline = time.time() + ms/1000
-        f = lambda: func(*args, **kwargs)
-        heappush(self.scheduler, (deadline, self.schedule_id, f))
-        self.schedule_id += 1
-
-    def check_schedule(self):
-        if self.scheduler:
-            now = time.time()
-            while self.scheduler:
-                nearest_deadline, sched_id, func = heappop(self.scheduler)
-                if now - nearest_deadline > 0:
-                    # deadline has past, call func
-                    print('calling scheduled func with id #', sched_id)
-                    func()
-                else:
-                    # no func is ready to be called
-                    heappush(self.scheduler, (nearest_deadline, sched_id, func))
-                    break
 
     def celebrate(self):
         print('you won!')
