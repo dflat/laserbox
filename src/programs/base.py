@@ -166,6 +166,15 @@ class StateMachine:
 ### PROGRAM base class ###
 #                        #
 
+class Composer:
+  """
+  Basically a show-runner, keeps a record of a sequence of events/
+  programs to be run, and the transitions that trigger swapping
+  to occur.
+  """
+  def __init__(self, program_sequence=config.PROGRAM_SEQUENCE):
+    self.program_sequence = program_sequence
+
 class Program:
     """
     Subclass this with triggers mapping filled,

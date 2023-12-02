@@ -1,6 +1,9 @@
 import sys
 
 class config:
+	### top level config constants ###
+	##								##
+
     PROJECT_ROOT = "../laserbox"
     DEBUG = True
     if sys.platform == 'linux':
@@ -8,11 +11,16 @@ class config:
     else:
 	    FPS = 60
     AUDIO_BUFFER = 2048         # samples
-    START_PROGRAM = "MusicMaker"# class name
     REGISTER_DELAY = 0          # seconds
     SIM_SCREEN_WH = 600,480     # pixels
     ANTI_JITTER_DELAY = .05      # seconds
     CONGRATS_VOL = 0.75
+    START_PROGRAM = "MusicMaker"
+    PROGRAM_SEQUENCE = ['ClueFinder', 'Idle', 'Flipper', 'Idle', 'Golf' ]
+
+    ### sub-config object for each Program subclass that needs one ###
+    ##																##
 
     class Flipper:
     	START_BOARD = [1,0,0,1,0,0]
+ 
