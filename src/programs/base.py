@@ -192,6 +192,10 @@ class Program:
 
     @property
     def tick(self):
+      """
+      Read-only so that subclass doesn't erroneously
+      update tick. Increments once per frame.
+      """
       return self._tick
     
     def update(self, dt):
@@ -200,6 +204,7 @@ class Program:
         """
         #TODO process system_triggers here (subclass should call super())
         self.check_cooldowns()
+        self.check_schedule()
         if self.input_manager.changed_state:
             pass
             #state = input_manager.state

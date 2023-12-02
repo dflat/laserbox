@@ -198,7 +198,6 @@ class Golf(Program):
         """
         super().update(dt)
         self.update_blink_animation()
-        self.check_schedule()
         self.program_t += dt
         # check event loop for input changes
         if self.swinging:
