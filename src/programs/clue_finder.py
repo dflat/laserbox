@@ -66,7 +66,6 @@ class ClueFinder(Program):
         Called every frame, whether state has changed or not.
         """
         super().update(dt)
-        #self.tick += 1 moved to base class
         # check event loop for input changes
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
@@ -74,7 +73,7 @@ class ClueFinder(Program):
                     self.game.mixer.play_by_id(event.key)
                     toggle_state = self.game.input_manager.state.toggles
                     self.button_down_history.append((event.key, toggle_state))
-                    self.start_cooldown(event.key)
+                    self.start_cooldown(event.key, ms=250)
             elif event.type == EventType.BUTTON_UP:
                 self.check_for_clue_success()
 

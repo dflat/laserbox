@@ -175,8 +175,7 @@ class Program:
     schedule_id = 0
     scheduler = [] # heap
   
-    cooldown_ticks = int(config.FPS*0.25) # quarter-second cooldown after button press
-    cooldowns = { } # button id => tick when triggered
+    cooldowns = { } # button id => deadline_tick
 
     system_triggers = { } # TODO .. enter SystemSettings, enter GameSelect modes
     triggers = { }
@@ -246,13 +245,15 @@ class Program:
                     heappush(self.scheduler, (nearest_deadline, sched_id, func))
                     break
 
-    def start_cooldown(self, button_id):
-        self.cooldowns[button_id] = self.tick
+    def start_cooldown(self, button_id, ms=250):
+        cooldown_ticks = int(config.FPS*ms/1000) # quarter-second cooldown after button press is default
+        deadline_tick = cooldown_ticks + self.tick
+        self.cooldowns[button_id] = deadline_tick
 
     def check_cooldowns(self):
         to_free = []
-        for button_id, start_tick in self.cooldowns.items():
-            if self.tick - start_tick > self.cooldown_ticks:
+        for button_id, deadline_tick in self.cooldowns.items():
+            if self.tick - deadline_tick > 0:
                 to_free.append(button_id)
         for button_id in to_free:
             self.cooldowns.pop(button_id)
