@@ -1,7 +1,9 @@
 from .base import *
 from ..event_loop import *
+from ..animation import random_k_dance
 import random
 import time
+
 
 class Flipper(Program):
     def __init__(self):
@@ -32,14 +34,9 @@ class Flipper(Program):
         return all(self.board)
 
     def victory_dance(self,t=5,k=3, delay = 0.1):
-        time.sleep(.5)
-        t0 = time.time()
-        t_now = 0
-        while t_now < t:
-            word = sum(2**random.randint(0,13) for _ in range(k))
-            self.game.outputs.push_word(word)
-            t_now = time.time() - t0
-            time.sleep(delay)
+        self.win_animation.start()
+        self.game.mixer.play_effect(self.win_sound)
+        self.after(self.win_dur*1000, self.reset_board)
 
     def reset_board(self):
         self.won = False
@@ -51,6 +48,10 @@ class Flipper(Program):
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
 
+        self.win_sound = 'congrats_extended.wav'
+        self.game.mixer.load_effect(self.win_sound)
+        self.win_dur = self.game.mixer.effects[self.win_sound].get_length()
+        self.win_animation = random_k_dance(k=3,fps=6 , dur=self.win_dur - 1.2)
         self.board = self.create_board()
         self.create_board_pattern()
         self.won = False
@@ -64,8 +65,7 @@ class Flipper(Program):
         """
         super().update(dt)
         if self.won:
-            self.victory_dance()
-            self.reset_board()
+            self.after(2000, self.victory_dance)
         # check event loop for input changes
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
