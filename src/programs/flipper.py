@@ -55,7 +55,7 @@ class Flipper(Program):
         super().quit(next_program)
 
     def start(self):
-        self.game.mixer.load_music('Nightcall22050.wav', loops=-1)
+        self.game.mixer.load_music('FlipperTutorialTrinity.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
 
