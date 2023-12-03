@@ -118,7 +118,11 @@ class Game:
     self.events = events # event loop reference (redundant as it is global singleton imported in this module)
     Animation.game = self # hack to get game reference from animation instances (todo: make cleaner reference link)
     self.state_machine = StateMachine(self)
-    self.state_machine.swap_program(config.START_PROGRAM)
+    if '-p' in sys.argv:
+      config.START_PROGRAM = sys.argv[2]
+      self.state_machine.launch_single_program(config.START_PROGRAM)
+    else:
+      self.state_machine.start_composition()
     
   def update(self, dt):
     # read input

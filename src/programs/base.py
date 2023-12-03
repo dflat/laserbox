@@ -131,14 +131,15 @@ class StateSequence:
       
 class StateMachine:
   PROGRAMS = { }
+  PAUSED = { }
 
   def __init__(self, game): #input_manager: InputManager):
     self.game = game
-    self.composer = Composer(game)
+    self.composer = BirthdayComposer(game)
     self.input_manager = game.input_manager
     self.state = State(0x00)
     self.program = None
-  
+
   @classmethod
   def register_program(cls, program):
       """
@@ -148,26 +149,40 @@ class StateMachine:
       cls.PROGRAMS[program.__class__.__name__] = program
       print('registered', program.__class__.__name__)
 
-  def swap_program(self, program_name: str, pause=False):
+  def launch_single_program(self, program_name: str):
+    """
+    Program invoked with command line option "-p [Program Name]"
+    """
+    self.program = self.PROGRAMS[program_name]
+    self.program.make_active_program(self.game)
+
+  def start_composition(self):
+    self.composer.start()
+    self.swap_program()
+
+  def swap_program(self, pause=False):
     """
     change the active program, and give it references
-    to input_manager and game objects.
+    to input_manager and game objects. Uses Composer
+    instance to advance through pre-defined program sequence.
     """
-    # pause or quit current program
-    if self.program:
-      if pause:
-        self.program.pause()
-      else:
-        self.program.finish()
+    # pause or quit current program, unless this is the first program
+    if pause and self.program:
+      self.PAUSED[self.program.__class__.__name__] = self.program
+      self.program.pause()
+    else:
+      pass
+      #self.program.finish()
 
     # load next program
-    self.program = self.PROGRAMS[program_name]
+    next_program_name = self.composer.next_program()
+    self.program = self.PROGRAMS[next_program_name]
     self.program.make_active_program(self.game)
     
   def update(self, dt):
     # TODO: process any system wide input?
     self.program.update(dt)
-    
+
 ##-- END STATE MACHINE --##
 ##-----------------------##
 
@@ -181,27 +196,46 @@ class Composer:
   programs to be run, and the transitions that trigger swapping
   to occur.
   """
-  def __init__(self, game, program_sequence=config.PROGRAM_SEQUENCE):
+  def __init__(self, game): 
     self.game = game
-    self.program_sequence = program_sequence
     self.program_index = 0
+    self.program_sequence = None # subclass must populate this in self.load_script
+    self.load_script()
+
+  def load_script(self):
+    """
+    Override in subclass
+    """ 
+    raise NotImplementedError('Subclass this method!')
 
   def start(self):
-    self.program = self.program_sequence[self.program_index]
+    """
+    State machine will call this once; if any
+    runtime initialization is needed, it can go here.
+    """
+    print('composer started')
 
   def finish(self):
     print('Composer script is complete.')
+    return None
 
-  def advance(self):
+  def next_program(self):
+    program_name = self.program_sequence[self.program_index]
     self.program_index += 1
+
     if self.program_index == len(self.program_sequence):
       return self.finish()
 
-    self.program = self.program_sequence[self.program_index]
+    return program_name
 
-
-
-
+class BirthdayComposer(Composer):
+  def load_script(self):
+    self.program_sequence = ['ClueFinder', 'TogglePattern', 'Flipper', 'TogglePattern', 'Golf' ]
+    self.config_sequence = [None,
+                            dict(start_audio='nathan_clue_one.wav', toggle_pattern=[(1,0),(0,1),(1,1)]),
+                            None,
+                            dict(start_audio='neo_morpheus.wav', toggle_pattern=[(0,0),(1,1),(0,0)]),
+                            None]
 
 class Program:
     """
@@ -256,7 +290,7 @@ class Program:
 
     def quit(self, next_program=None):
       print('Program base class quit method called.')
-      pass
+      self.game.state_machine.swap_program()
 
     def make_active_program(self, game):
         self.game = game
