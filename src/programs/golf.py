@@ -20,11 +20,11 @@ class Golf(Program):
 
     def init_sound_feedback(self):
         self.music = 'Golf2Slow.wav'
-        self.fall_off_sound = 'splash.wav'
+        self.fall_off_sound = 'splash_mono.wav'
         self.advance_port_sound = os.path.join('positive', 'arcade_plus_one.wav')
         self.win_sound = os.path.join('positive', 'hooray.wav')
         self.congrats_sound = os.path.join('positive', 'congrats_extended.wav')
-        self.patch = 'kicks_ascending'   # sounds to play as laser "rolls" along increasing "holes"
+        self.patch = 'kicks_ascending_mono'   # sounds to play as laser "rolls" along increasing "holes"
         self.voice_feedback = [os.path.join('golf_feedback', name) for name in (
             'trin_perfect.wav',
             'trin_one_away.wav',
