@@ -155,10 +155,19 @@ class StateMachine:
     """
     self.program = self.PROGRAMS[program_name]
     self.program.make_active_program(self.game)
+    self.program.start()
+    if config.DEBUG:
+        print('loaded program: ', self.__class__.__name__)
 
   def start_composition(self):
     self.composer.start()
     self.swap_program()
+
+  def launch_program(self, name):
+
+        self.start()
+        if config.DEBUG:
+            print('loaded program: ', self.__class__.__name__)
 
   def swap_program(self, pause=False):
     """
@@ -168,6 +177,7 @@ class StateMachine:
     """
     # pause or quit current program, unless this is the first program
     if pause and self.program:
+      # note: 'pause' is not currently being used
       self.PAUSED[self.program.__class__.__name__] = self.program
       self.program.pause()
     else:
@@ -175,12 +185,14 @@ class StateMachine:
       #self.program.finish()
 
     # load next program
-    next_program_name = self.composer.next_program()
-    self.program = self.PROGRAMS[next_program_name]
+    self.composer.next_program()
+    self.program = self.PROGRAMS[self.composer.program_name]
     self.program.make_active_program(self.game)
+    self.program.start(**self.composer.program_kwargs)
     
   def update(self, dt):
     # TODO: process any system wide input?
+    # update currently running program
     self.program.update(dt)
 
 ##-- END STATE MACHINE --##
@@ -198,8 +210,8 @@ class Composer:
   """
   def __init__(self, game): 
     self.game = game
-    self.program_index = 0
-    self.program_sequence = None # subclass must populate this in self.load_script
+    self.program_index = -1
+    self.program_name_sequence = None # subclass must populate this in self.load_script
     self.load_script()
 
   def load_script(self):
@@ -219,23 +231,35 @@ class Composer:
     print('Composer script is complete.')
     return None
 
+  @property
+  def program_name(self):
+    return self.program_name_sequence[self.program_index]
+
+  @property
+  def program_kwargs(self):
+    return self.program_kwargs_sequence[self.program_index]
+  
   def next_program(self):
-    program_name = self.program_sequence[self.program_index]
     self.program_index += 1
 
-    if self.program_index == len(self.program_sequence):
+    if self.program_index == len(self.program_name_sequence):
       return self.finish()
 
-    return program_name
+    return True
 
 class BirthdayComposer(Composer):
   def load_script(self):
-    self.program_sequence = ['ClueFinder', 'TogglePattern', 'Flipper', 'TogglePattern', 'Golf' ]
-    self.config_sequence = [None,
-                            dict(start_audio='nathan_clue_one.wav', toggle_pattern=[(1,0),(0,1),(1,1)]),
-                            None,
-                            dict(start_audio='neo_morpheus.wav', toggle_pattern=[(0,0),(1,1),(0,0)]),
-                            None]
+    # todo: put this data in one array [(name, args), ...]
+    # and have class @properties fixed to match
+    self.program_name_sequence = ['ClueFinder', 'TogglePattern', 'Flipper', 'TogglePattern', 'Golf', 'TogglePattern']
+    self.program_kwargs_sequence = [
+            dict(),
+            dict(start_audio='nathan_clue_one.wav', toggle_pattern=[3,0,3]),
+            dict(),
+            dict(start_audio='neo_morpheus_clue_two.wav', toggle_pattern=[1,2,0]),
+            dict(),
+            dict(start_audio='nathan_final_clue.wav', toggle_pattern=[0,1,2]), # unused toggle pattern for now
+    ]
 
 class Program:
     """
@@ -295,9 +319,9 @@ class Program:
     def make_active_program(self, game):
         self.game = game
         self.input_manager = self.game.input_manager
-        self.start()
-        if config.DEBUG:
-            print('loaded program: ', self.__class__.__name__)
+#        self.start()
+#        if config.DEBUG:
+#            print('loaded program: ', self.__class__.__name__)
 
     def after(self, ms, func, *args, **kwargs):
         deadline = time.time() + ms/1000

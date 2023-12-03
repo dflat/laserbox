@@ -6,3 +6,4 @@ from .music_maker import MusicMaker
 from .trivia import Trivia
 from .flipper import Flipper
 from .golf import Golf
+from .toggle_pattern import TogglePattern

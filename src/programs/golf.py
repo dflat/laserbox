@@ -52,7 +52,7 @@ class Golf(Program):
         self.release_pending = { } # used for anti-jitter protection on physical button release
         self.last_blink_toggle = 0
         self.goals_scored = 0
-        self.goals_to_complete = 1
+        self.goals_to_complete = 3
         pygame.mixer.music.set_volume(1)
         self.game.mixer.load_music(self.music, fade_ms=2000)
         self.game.mixer.load_effect(self.fall_off_sound, volume=0.5)
@@ -62,8 +62,8 @@ class Golf(Program):
         for feedback in self.voice_feedback:
             self.game.mixer.load_effect(feedback)
         self.game.mixer.use_patch(self.patch)
-        congrats_dur = self.game.mixer.effects[self.congrats_sound].get_length()
-        self.win_animation = random_k_dance(k=3, fps=8, dur=max(0,int(congrats_dur)-1))
+        self.congrats_dur = self.game.mixer.effects[self.congrats_sound].get_length()
+        self.win_animation = random_k_dance(k=3, fps=8, dur=max(0,self.congrats_dur-1.2))
         self.reset()
 
     def reset(self, goal=13, tries_left=3):
@@ -152,7 +152,7 @@ class Golf(Program):
         self.game.mixer.play_effect(self.win_sound)
         if self.goals_scored >= self.goals_to_complete:
             pygame.mixer.music.fadeout(3000)
-            self.after(1000, self.complete)
+            self.after(3000, self.complete)
         # say 'starting new round (TODO)'
         else:
             self.after(3000, self.reset, random.randint(8,13))
@@ -161,8 +161,13 @@ class Golf(Program):
         self.game.mixer.play_effect(self.congrats_sound)
         self.win_animation.start()
         print('game complete...')
+        self.after(self.congrats_dur*1000, self.quit)
         #self.advance_program_or_exit() # TODO
 
+    def quit(self):
+        # cleanup
+        super().quit()
+        
     def play_voice_feedback(self, displacement_index):
         if displacement_index is None:
             # fell off the edge

@@ -43,6 +43,9 @@ class Mixer:
         pygame.mixer.music.load(path)
         pygame.mixer.music.play(loops=loops, fade_ms=fade_ms)
 
+    def fade_music(self, fade_ms=0):
+        pygame.mixer.music.fadeout(fade_ms)
+
     def play_effect(self, filename, loops=0):
         if filename not in self.effects:
             self.load_effect(filename)

@@ -16,7 +16,7 @@ class config:
     ANTI_JITTER_DELAY = .05      # seconds
     CONGRATS_VOL = 0.75
     START_PROGRAM = "MusicMaker"
-    PROGRAM_SEQUENCE = ['ClueFinder', 'Idle', 'Flipper', 'Idle', 'Golf' ]
+    PROGRAM_SEQUENCE = ['ClueFinder', 'TogglePattern', 'Flipper', 'TogglePattern', 'Golf' ]
 
     ### sub-config object for each Program subclass that needs one ###
     ##																##

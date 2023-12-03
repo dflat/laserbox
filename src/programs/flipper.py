@@ -43,17 +43,17 @@ class Flipper(Program):
     def victory_dance(self):
         self.win_animation.start()
         self.game.mixer.play_effect(self.congrats_sound)
-        self.after(self.win_dur*1000, self.reset_board)
+        self.after(self.win_dur*1000, self.quit)
 
     def reset_board(self):
         self.won = False
         self.board = self.create_board()
         self.game.lasers.set_word(0)
 
-    def quit(self, next_program=None):
-        # do any cleanup here...
-        self.playing = False
-        super().quit(next_program)
+    def quit(self):
+        # do any cleanup here
+        self.reset_board()
+        super().quit()
 
     def start(self):
         self.game.mixer.load_music('FlipperTutorialTrinity.wav', loops=-1)
@@ -78,9 +78,9 @@ class Flipper(Program):
             return
 
         if self.won:
+            self.playing = False
             pygame.mixer.music.fadeout(2000)
             self.after(1000, self.victory_dance)
-            self.quit()
 
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
