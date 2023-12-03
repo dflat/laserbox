@@ -134,6 +134,7 @@ class StateMachine:
 
   def __init__(self, game): #input_manager: InputManager):
     self.game = game
+    self.composer = Composer(game)
     self.input_manager = game.input_manager
     self.state = State(0x00)
     self.program = None
@@ -147,11 +148,19 @@ class StateMachine:
       cls.PROGRAMS[program.__class__.__name__] = program
       print('registered', program.__class__.__name__)
 
-  def swap_program(self, program_name: str):
+  def swap_program(self, program_name: str, pause=False):
     """
     change the active program, and give it references
     to input_manager and game objects.
     """
+    # pause or quit current program
+    if self.program:
+      if pause:
+        self.program.pause()
+      else:
+        self.program.finish()
+
+    # load next program
     self.program = self.PROGRAMS[program_name]
     self.program.make_active_program(self.game)
     
@@ -172,8 +181,27 @@ class Composer:
   programs to be run, and the transitions that trigger swapping
   to occur.
   """
-  def __init__(self, program_sequence=config.PROGRAM_SEQUENCE):
+  def __init__(self, game, program_sequence=config.PROGRAM_SEQUENCE):
+    self.game = game
     self.program_sequence = program_sequence
+    self.program_index = 0
+
+  def start(self):
+    self.program = self.program_sequence[self.program_index]
+
+  def finish(self):
+    print('Composer script is complete.')
+
+  def advance(self):
+    self.program_index += 1
+    if self.program_index == len(self.program_sequence):
+      return self.finish()
+
+    self.program = self.program_sequence[self.program_index]
+
+
+
+
 
 class Program:
     """
@@ -236,7 +264,6 @@ class Program:
         self.start()
         if config.DEBUG:
             print('loaded program: ', self.__class__.__name__)
-
 
     def after(self, ms, func, *args, **kwargs):
         deadline = time.time() + ms/1000
