@@ -52,7 +52,7 @@ class Golf(Program):
         self.release_pending = { } # used for anti-jitter protection on physical button release
         self.last_blink_toggle = 0
         self.goals_scored = 0
-        self.goals_to_complete = 3
+        self.goals_to_complete = config.Golf.GOALS_TO_COMPLETE #3
         pygame.mixer.music.set_volume(1)
         self.game.mixer.load_music(self.music, fade_ms=2000)
         self.game.mixer.load_effect(self.fall_off_sound, volume=0.5)

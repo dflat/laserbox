@@ -25,3 +25,5 @@ class config:
     class Flipper:
     	START_BOARD = [1,0,1,0,1,0]
  
+    class Golf:
+        GOALS_TO_COMPLETE = 3
