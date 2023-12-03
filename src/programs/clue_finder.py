@@ -18,7 +18,7 @@ class ClueFinder(Program):
                             2: 'adverbs',
                             3: 'numbers'}
 
-        self.clues = [((0,0),(1,1),(0,2))] # (button_id, toggle_state [i.e. patch_map index])
+        self.clues = [((0,0),(7,1),(3,2),(6,0))] # (button_id, toggle_state [i.e. patch_map index])
 
     def clue_success(self):
         self.clue_idx += 1
@@ -34,16 +34,17 @@ class ClueFinder(Program):
         self.success_anim.start()
         self.after(self.win_dur*1000, self.quit)
         
-    def check_for_clue_success(self, clue_phrase_length=3, max_sequence_length=3):
+    def check_for_clue_success(self, clue_phrase_length=4, max_sequence_length=4):
+        print('seq:', clue_phrase_length, max_sequence_length)
         current_clue = self.clues[self.clue_idx]
         phrase_word_index = 0
         for e in events.get_filtered_history(EventType.BUTTON_DOWN, n=max_sequence_length):
             candidate_phrase_word = (e.key, e.state.toggles)
             target_phrase_word = current_clue[phrase_word_index]
-            #print('candidate:', candidate_phrase_word, 'target:', target_phrase_word)
+            print('candidate:', candidate_phrase_word, 'target:', target_phrase_word)
             if candidate_phrase_word == target_phrase_word:
                 phrase_word_index += 1
-                #print(f'got word {phrase_word_index} correct.')
+                print(f'got word {phrase_word_index} correct.')
             if phrase_word_index == (clue_phrase_length):
                 self.clue_success()
 
