@@ -22,5 +22,5 @@ class config:
     ##																##
 
     class Flipper:
-    	START_BOARD = [1,0,0,1,0,0]
+    	START_BOARD = [1,0,1,0,1,0]
  

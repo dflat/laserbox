@@ -193,7 +193,7 @@ class Golf(Program):
 
         if displacement_index > self.prev_displacement_index:
             # ball has advanced forward one space.
-            print(f'**{displacement_index}**')
+            #print(f'**{displacement_index}**')
             self.game.mixer.play_by_id(displacement_index, duck=False)
             #self.game.mixer.play_effect(self.advance_port_sound)
             self.set_word(1 << displacement_index)
@@ -203,7 +203,7 @@ class Golf(Program):
         if displacement_index == self.end_displacement_index:
             # ball has come to a stop.
             # note: should there be a delay here?
-            print('reached end port (ball stopped) at:', displacement_index)
+            #print('reached end port (ball stopped) at:', displacement_index)
             self.grade_roll(displacement_index)
 
     def grade_roll(self,displacement_index):

@@ -19,6 +19,7 @@ class Flipper(Program):
     def create_board_pattern(self, diffuclty=0, fixed=None): 
         if fixed:
             self.board = fixed
+            print(fixed)
         else:
             for i in range(len(self.board)):
                 state = random.randint(0,1)
