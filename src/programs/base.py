@@ -260,7 +260,7 @@ class BirthdayComposer(Composer):
             dict(),
             dict(start_audio='neo_morpheus_clue_two.wav', toggle_pattern=[1,2,0]),
             dict(),
-            dict(start_audio='nathan_final_clue.wav', toggle_pattern=[0,1,2]), # unused toggle pattern for now
+            dict(start_audio='nathan_clue_final.wav', toggle_pattern=[0,1,2]), # unused toggle pattern for now
     ]
 
 class Program:
