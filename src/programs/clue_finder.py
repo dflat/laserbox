@@ -13,10 +13,10 @@ class ClueFinder(Program):
 
         }
         self.sequence_triggers = { }
-        self.patch_map = {  0: 'numbers',
+        self.patch_map = {  0: 'nouns',
                             1: 'verbs',
                             2: 'adverbs',
-                            3: 'articles_and_preps'}
+                            3: 'numbers'}
 
         self.clues = [((0,0),(1,1),(0,2))] # (button_id, toggle_state [i.e. patch_map index])
 
