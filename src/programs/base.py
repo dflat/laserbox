@@ -9,6 +9,7 @@ __all__ = ['State', 'StateSequence', 'StateMachine', 'Program']
 import time
 from heapq import heappush, heappop
 from ..config import config
+from ..animation import hold_pattern
 
 ###########################
 ###    STATE MACHINE    ###
@@ -254,7 +255,8 @@ class BirthdayComposer(Composer):
     self.program_name_sequence = ['ClueFinder', 'TogglePattern', 'Flipper', 'TogglePattern', 'Golf', 'TogglePattern']
     self.program_kwargs_sequence = [
             dict(),
-            dict(start_audio='nathan_clue_one.wav', toggle_pattern=[3,0,3]),
+            dict(start_audio='nathan_clue_one.wav', toggle_pattern=[3,0,3],
+                  hold_animation=hold_pattern(pattern=config.LASER_HOLD_PATTERN)),
             dict(),
             dict(start_audio='neo_morpheus_clue_two.wav', toggle_pattern=[1,2,0]),
             dict(),

@@ -17,6 +17,7 @@ class config:
     CONGRATS_VOL = 0.75
     START_PROGRAM = "MusicMaker"
     PROGRAM_SEQUENCE = ['ClueFinder', 'TogglePattern', 'Flipper', 'TogglePattern', 'Golf' ]
+    LASER_HOLD_PATTERN = [1,0,7,0,3,0,0,0] # post nathan-clue-one laser animation numberic code
 
     ### sub-config object for each Program subclass that needs one ###
     ##																##

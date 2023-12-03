@@ -160,14 +160,14 @@ class Golf(Program):
     def complete(self):
         self.game.mixer.play_effect(self.congrats_sound)
         self.win_animation.start()
-        print('game complete...')
+        print('golf game complete...')
         self.after(self.congrats_dur*1000, self.quit)
         #self.advance_program_or_exit() # TODO
 
     def quit(self):
         # cleanup
         super().quit()
-        
+
     def play_voice_feedback(self, displacement_index):
         if displacement_index is None:
             # fell off the edge

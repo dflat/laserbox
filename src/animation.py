@@ -84,14 +84,14 @@ class Animation:
     self.done = done_callback or self.done
 
     self.anim_id = self._anim_id
-    self.anim_id += 1
+    self._anim_id += 1
 
   @classmethod
   def update_all(cls, dt):
     for anim_id, animation in cls.currently_running.items():
       animation.update(dt)
 
-    for anim_id in cls.finished:
+    for anim_id in set(cls.finished):
         cls.currently_running.pop(anim_id)
     cls.finished = { }
     
@@ -99,6 +99,7 @@ class Animation:
     """
     Do not override. Called before ::self.set_up:: on animation start.
     """
+    print('animation started with id:', self.anim_id)
     self.t = 0        # elapsed time since animation started
     self.tick_no = 0  # incremented on each game frame
     self.frame_no = 0
@@ -135,13 +136,24 @@ class Animation:
     """
     Do not override. Called before ::self.done:: on animation end.
     """
-    if self.loops > 0:
+    if self.loops == -1:
+      return self.start()
+
+    elif self.loops > 0:
       self.loops -= 1
       return self.start()
+
     self.loops = self._loops
     self.done()
-    self.finished[self.anim_id] = self
+    self.__class__.finished[self.anim_id] = self
 
+  @classmethod
+  def kill_by_id(cls, anim_id):
+    cls.finished[anim_id] = self
+
+  def kill(self):
+    self.__class__.finished[self.anim_id] = self
+    print('animation killed with id:', self.anim_id)
 
   def set_up(self):
     """
@@ -168,7 +180,7 @@ class Animation:
       if self.frames.func:
         frame = self.frames.func(frame) # todo: what arguments if any to provide to func? could it be used to modify current frame before
                 # playback?
-      if frame.word:
+      if frame.word is not None:
         self.game.lasers.set_word(frame.word)
       if frame.sound:
         self.game.mixer.play_effect(frame.sound)
@@ -194,6 +206,13 @@ class ThreadedAnimation:
     super().__init__(*args, **kwargs)
 
 # example Animation factories
+def hold_pattern(fps=1, loops=-1, pattern=[1,0,7,0,3,0,0,0]):
+  word_frames = pattern # todo: put this in config object
+  sound_frames = None
+  frames = Frame.from_list(words=word_frames, sounds=sound_frames)
+  frame_seq = FrameSequence.by_fps(frames=frames, fps=fps)
+  return Animation(frames=frame_seq, loops=loops)
+
 def ping_pong(fps=5, loops=3):
   word_frames =  [2**i for i in range(14)] + [2**i for i in reversed(range(1,13))]
   sound_frames = None #[os.path.join('lasers', '02_Low.wav')]*len(word_frames)
