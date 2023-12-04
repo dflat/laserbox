@@ -10,10 +10,10 @@ class config:
     	FPS = 800
     else:
 	    FPS = 60
-    AUDIO_BUFFER = 2048         # samples
+    AUDIO_BUFFER = int(2048/2)         # samples
     REGISTER_DELAY = 0          # seconds
     SIM_SCREEN_WH = 600,480     # pixels
-    ANTI_JITTER_DELAY = .05      # seconds
+    ANTI_JITTER_DELAY = .001      # seconds
     CONGRATS_VOL = 0.75
     START_PROGRAM = "MusicMaker"
     PROGRAM_SEQUENCE = ['ClueFinder', 'TogglePattern', 'Flipper', 'TogglePattern', 'Golf' ]

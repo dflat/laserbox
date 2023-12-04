@@ -26,7 +26,7 @@ class Mixer:
     VOL_HIGH = 1
     FPS = 30
 
-    def __init__(self, sr=int(22050), bitdepth=-16, channels=1, buffer=int(2048)):
+    def __init__(self, sr=int(22050), bitdepth=-16, channels=1, buffer=config.AUDIO_BUFFER):
         pygame.mixer.pre_init(sr, bitdepth, channels, buffer)
         pygame.mixer.init()
         print(f'mixer initialized in Mixer class to sr:{sr}, buffer:{buffer}')
@@ -125,7 +125,7 @@ class Mixer:
 #import simpleaudio as sa
 class SimpleMixer(Mixer):
 
-    def __init__(self, sr=int(22050), bitdepth=-16, channels=1, buffer=int(2048)):
+    def __init__(self, sr=int(22050), bitdepth=-16, channels=1, buffer=config.AUDIO_BUFFER):
         self.sr = sr
         self.channels = channels
         self.bytes_per_sample = int(abs(bitdepth)/2)
