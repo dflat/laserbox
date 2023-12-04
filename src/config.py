@@ -7,10 +7,10 @@ class config:
     PROJECT_ROOT = "../laserbox"
     DEBUG = True
     if sys.platform == 'linux':
-    	FPS = 800
+    	FPS = 100
     else:
 	    FPS = 60
-    AUDIO_BUFFER = int(2048/2)         # samples
+    AUDIO_BUFFER = int(2048/128)         # samples
     REGISTER_DELAY = 0          # seconds
     SIM_SCREEN_WH = 600,480     # pixels
     ANTI_JITTER_DELAY = .001      # seconds
