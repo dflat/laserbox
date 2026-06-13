@@ -35,7 +35,9 @@ class MusicMaker(Program):
         # check event loop for input changes
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
-                self.game.mixer.play_by_id(event.key, duck=False)
+                if event.key not in self.cooldowns:
+                    self.game.mixer.play_by_id(event.key, duck=False)
+                    self.start_cooldown(event.key, ms=100)
             elif event.type == EventType.BUTTON_UP:
                 self.game.mixer.fadeout_by_id(event.key, ms=200)
 
