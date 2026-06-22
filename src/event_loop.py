@@ -84,6 +84,15 @@ class EventLoop:
         self.q.put(event)
         self.history.append(event) # todo: maybe at to history after consumed (e.g. in get() method) ?
 
+    def clear(self):
+        """Drain any unconsumed events. Used on program switches so stale input
+        (e.g. the entry-gesture button presses) doesn't bleed into the next program."""
+        while not self.q.empty():
+            try:
+                self.q.get_nowait()
+            except Exception:
+                break
+
     def get_filtered_history(self, types: 'list(EventType)', n=100):
         if isinstance(types, EventType): # allow single type arguments
             types = [types]

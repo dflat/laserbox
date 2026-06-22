@@ -149,7 +149,19 @@ class Animation:
 
   @classmethod
   def kill_by_id(cls, anim_id):
-    cls.finished[anim_id] = self
+    anim = cls.currently_running.get(anim_id)
+    if anim is not None:
+      cls.finished[anim_id] = anim
+
+  @classmethod
+  def kill_all(cls):
+    """
+    Immediately stop every running animation. Used by the StateMachine when
+    tearing down a program so animations don't keep driving the lasers into
+    the next program. Does not invoke ::done:: callbacks.
+    """
+    cls.currently_running = { }
+    cls.finished = { }
 
   def kill(self):
     self.__class__.finished[self.anim_id] = self

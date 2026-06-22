@@ -122,7 +122,7 @@ class Game:
       config.START_PROGRAM = sys.argv[2]
       self.state_machine.launch_single_program(config.START_PROGRAM)
     else:
-      self.state_machine.start_composition()
+      self.state_machine.enter_game_select()
     
   def update(self, dt):
     # read input

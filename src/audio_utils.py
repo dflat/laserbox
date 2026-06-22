@@ -46,6 +46,11 @@ class Mixer:
     def fade_music(self, fade_ms=0):
         pygame.mixer.music.fadeout(fade_ms)
 
+    def stop_all(self):
+        """Stop the music stream and every playing effect channel at once."""
+        pygame.mixer.music.stop()
+        pygame.mixer.stop()
+
     def play_effect(self, filename, loops=0):
         if filename not in self.effects:
             self.load_effect(filename)
