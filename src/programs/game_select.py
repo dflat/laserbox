@@ -11,11 +11,13 @@ class GameSelect(Program):
     every launched game/composition returns here when it finishes (or when the
     entry gesture is performed mid-game).
 
-    Each assigned button (config.GameSelect.MENU) is a menu slot:
-      - first press announces the entry's name and "arms" it (its laser lights),
-      - pressing the same button again launches it,
-      - pressing a different assigned button re-arms to that one,
-      - an armed selection clears itself after ARM_TIMEOUT_MS.
+    Each assigned button (``config.GameSelect.MENU``) is a menu slot:
+
+    * first press announces the entry's name and "arms" it (its laser lights),
+    * pressing the same button again launches it,
+    * pressing a different assigned button re-arms to that one,
+    * an armed selection clears itself after ``ARM_TIMEOUT_MS``.
+
     Unassigned buttons are ignored.
     """
     EFFECT_DIR = 'menu'

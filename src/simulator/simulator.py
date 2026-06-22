@@ -1,3 +1,14 @@
+"""Desktop simulator: dummy shift registers + a pygame view of the laser floor.
+
+Run with ``python -m src -s``. :class:`Simulator` subclasses
+:class:`~src.game_loop.Game`, swapping the real GPIO registers for keyboard- and
+screen-backed dummies so the whole game can run without the physical box:
+
+* :class:`DummyInputShiftRegister` maps keys ``0``-``9`` and ``a``-``f`` to the
+  16 input bits (``e`` = toggle 0, ``f`` = toggle 1; toggles flip on keydown).
+* :class:`DummyOutputShiftRegister` drives :class:`LaserPort` view objects.
+* :class:`DummyLaserBay` lays the 14 ports out as the physical floor.
+"""
 import sys
 import time
 import pygame
@@ -16,19 +27,31 @@ WHITE = (255,255,255)
 RED = (255,0,0)
 
 def scale(verts, sx, sy):
+    """Scale a set of 2D vertices by ``(sx, sy)``."""
     return (np.diag((sx,sy)) @ verts.T).T
 
 def flip_y(verts):
+    """Identity (a vertical-flip hook, currently disabled)."""
     return verts#(np.diag((1, -1)) @ verts.T).T
 
 def rot_z(verts, phi):
+    """Rotate a set of 2D vertices by angle ``phi`` (radians)."""
     return (np.array(((cos(phi), -sin(phi)),
                       (sin(phi), cos(phi)) )) @ verts.T).T
 
 class GameObject:
+    """Base for drawable simulator objects; ``group`` collects all instances."""
     group = []
 
 class LaserPort(GameObject):
+    """A drawn laser emitter: a triangle plus a beam line when on.
+
+    Args:
+        port_id: The laser index (0..13) this view represents.
+        pos: ``(x, y)`` screen position of the emitter.
+        laser_length: Beam length in pixels.
+        direction: Unit ``(dx, dy)`` the beam points along.
+    """
     W = 20
     H = 30
     PAD = 40
@@ -55,9 +78,10 @@ class LaserPort(GameObject):
         self.on = True
 
     def _turn_off(self):
-        self.on = False  
+        self.on = False
 
     def render(self, surf):
+        """Draw the emitter triangle and, if on, the red beam line."""
         pygame.draw.polygon(surf, WHITE, self.verts)
         if self.on:
             start = self.pos
@@ -66,6 +90,11 @@ class LaserPort(GameObject):
 
 
 class DummyLaserBay(LaserBay):
+    """A :class:`~src.game_loop.LaserBay` whose lasers are drawn :class:`LaserPort` views.
+
+    Args:
+        n: Number of lasers (default 14).
+    """
     def __init__(self, n=14):
         self.n = n
         self.word = 0
@@ -74,6 +103,7 @@ class DummyLaserBay(LaserBay):
         self._init_objects()
 
     def _init_objects(self):
+        """Lay out the 14 ports as the physical floor (two rows + two sides)."""
         OFFSET = LaserPort.W/2 + LaserPort.PAD/2
         FLOOR_W = LaserPort.W*2 + LaserPort.PAD*3
         FLOOR_H = LaserPort.W*6 + LaserPort.PAD*7
@@ -97,11 +127,13 @@ class DummyLaserBay(LaserBay):
             self.lasers[port_id] = laser
 
 class DummyOutputShiftRegister:
+    """Stand-in output register: maps a pushed word onto the drawn lasers."""
     def __init__(self):
         print('init DummyOutputShiftRegister')
         pass
 
     def push_word(self, word):
+        """Turn each :class:`LaserPort` on/off per the bit at its ``port_id``."""
         for laser in LaserPort.group:
             if word & (1 << laser.port_id):
                 laser._turn_on()
@@ -109,15 +141,18 @@ class DummyOutputShiftRegister:
                 laser._turn_off()
 
 class DummyInputShiftRegister():
-    """
-    Used for testing, standard keyboard numpad
-    triggers inputs (0-9a-f, hex coded)
+    """Stand-in input register driven by the keyboard.
+
+    Keys ``0``-``9`` and ``a``-``f`` map (hex) to the 16 input bits. ``e`` and
+    ``f`` are the two toggles (they flip state on keydown); all other keys are
+    momentary buttons (down while held).
     """
     def __init__(self):
         self.bitmap = {getattr(pygame,f'K_{c}'): i for i,c in enumerate('0123456789abcdef')}
         self.state = [0]*16
 
     def read_word(self):
+        """Pump pygame events into ``self.state`` and return the 16-bit word."""
         word = 0x00
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -147,6 +182,7 @@ class DummyInputShiftRegister():
         return word
 dts=[]
 class Simulator(Game):
+    """A :class:`~src.game_loop.Game` wired to the dummy registers + pygame view."""
     def __init__(self):
         super().__init__(PISOreg=DummyInputShiftRegister(),
                          SIPOreg=DummyOutputShiftRegister(),
@@ -160,6 +196,7 @@ class Simulator(Game):
         self.lasers = DummyLaserBay(14)
 
     def render(self):
+        """Push the laser word, then redraw the floor."""
         super().render()
         self.screen.fill(BLACK)
         for laser in LaserPort.group:
@@ -167,12 +204,14 @@ class Simulator(Game):
         pygame.display.flip()
 
     def update(self, dt):
+        """Run one game frame, then tick the view objects."""
         super().update(dt)
         self.frame += 1
         for laser in LaserPort.group:
             laser.update(dt)
 
     def run(self):
+        """Run the simulator main loop."""
         self.dt = 1/self.FPS
         print('hiell')
         while True:
@@ -180,5 +219,3 @@ class Simulator(Game):
           self.render()
           self.dt = self.clock.tick(self.FPS)
           dts.append(self.dt)
-
-

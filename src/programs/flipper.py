@@ -1,3 +1,8 @@
+"""Flipper: a "Lights Out" style puzzle on 6 lasers.
+
+Pressing a button toggles its laser and its immediate neighbours. The round is
+won when all six lasers are on. A toggle switch reshuffles the board.
+"""
 from .base import *
 from ..event_loop import *
 from ..animation import random_k_dance
@@ -9,14 +14,18 @@ import os
 
 
 class Flipper(Program):
+    """Lights-Out puzzle: flip a laser and its neighbours; win when all are on."""
+
     def __init__(self):
         super().__init__()
 
-    def create_board(self,n=6):
+    def create_board(self, n=6):
+        """Return a fresh all-off board of length ``n``."""
         board = [0]*n
         return board
 
-    def create_board_pattern(self, diffuclty=0, fixed=None): 
+    def create_board_pattern(self, diffuclty=0, fixed=None):
+        """Populate the board (random, or a ``fixed`` pattern) and show it."""
         if fixed:
             self.board = fixed
             print(fixed)
@@ -27,6 +36,7 @@ class Flipper(Program):
         self.update_laser()
 
     def update_laser(self):
+        """Reflect the current board state onto the lasers."""
         for i in range(len(self.board)):
             self.game.lasers.set_value(i, self.board[i])
 #            if self.board[i] == 1:
@@ -34,28 +44,34 @@ class Flipper(Program):
 #            else:
 #                self.game.lasers.turn_off(i)
 
-    def flip(self,pos):
+    def flip(self, pos):
+        """Toggle the board cell at ``pos``."""
         self.board[pos]= int(not(self.board[pos]))
 
     def check_for_win(self):
+        """True when every board cell is on."""
         return all(self.board)
 
     def victory_dance(self):
+        """Play the win animation + sound, then quit after it finishes."""
         self.win_animation.start()
         self.game.mixer.play_effect(self.congrats_sound)
         self.after(self.win_dur*1000, self.quit)
 
     def reset_board(self):
+        """Clear the board and lasers."""
         self.won = False
         self.board = self.create_board()
         self.game.lasers.set_word(0)
 
     def quit(self):
+        """Reset the board, then hand control back to the state machine."""
         # do any cleanup here
         self.reset_board()
         super().quit()
 
     def start(self):
+        """Load music + win assets and deal the starting board."""
         self.game.mixer.load_music('FlipperTutorialTrinity.wav', loops=-1)
         self.game.mixer.set_music_volume(1)
         self.game.mixer.VOL_HIGH = 1
@@ -70,9 +86,7 @@ class Flipper(Program):
         self.playing = True
 
     def update(self, dt):
-        """
-        Called every frame, whether state has changed or not.
-        """
+        """Apply button flips (cell + neighbours); detect and celebrate a win."""
         super().update(dt)
         if not self.playing:
             return
@@ -103,5 +117,5 @@ class Flipper(Program):
                 self.won = False
 
         self.won = self.check_for_win()
- 
+
 Flipper()

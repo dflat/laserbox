@@ -1,7 +1,15 @@
+"""Golf: a timing/power mini-game played across the laser row.
+
+Hold a button to charge power (a sine wave drives a growing bar of lit lasers),
+release to "swing". The ball then "rolls" along the lasers with exponential
+decay and comes to rest on a port; land on the blinking target hole to score.
+A spoken voice gives feedback on how close you were. Score
+``config.Golf.GOALS_TO_COMPLETE`` goals to finish.
+"""
 from .base import *
 from ..event_loop import *
 from ..config import config
-from ..animation import random_k_dance 
+from ..animation import random_k_dance
 import random
 import os
 import time
@@ -11,6 +19,8 @@ import pygame
 from math import sin, pi, floor
 
 class Golf(Program):
+    """Charge-and-release golf: stop the rolling ball on the blinking target."""
+
     def __init__(self):
         super().__init__()
         self.buttons = [0,1,2,3,4,5] # allow any of these to trigger swing
@@ -19,6 +29,7 @@ class Golf(Program):
         self.init_blink_duty_cycle()
 
     def init_sound_feedback(self):
+        """Set the music, effect, patch, and voice-feedback asset paths."""
         self.music = 'Golf2Slow.wav'
         self.fall_off_sound = 'splash_mono.wav'
         self.advance_port_sound = os.path.join('positive', 'arcade_plus_one.wav')
@@ -36,6 +47,7 @@ class Golf(Program):
             )]
 
     def init_blink_duty_cycle(self):
+        """Precompute the on/off tick counts for blinking the target hole."""
         self.blink_fps = 3                  # frequency of "target hole" laser blinks
         self.blink_duty_cycle = .5         # percent of cycle to keep laser ON
         self.blink_cycle_ticks = config.FPS/self.blink_fps              # ticks in one duty cycle
@@ -44,6 +56,7 @@ class Golf(Program):
         self.ticks_to_wait = [blink_off_ticks, blink_on_ticks]         # indexed by toggle flag
 
     def start(self):
+        """Load audio/animation assets, init round state, and deal the first goal."""
         print('starting')
         self.program_t = 0
         self.blink_on = True
@@ -67,6 +80,7 @@ class Golf(Program):
         self.reset()
 
     def reset(self, goal=13, tries_left=3):
+        """Start a new round/attempt: clear state and set the target ``goal``."""
         self.tries_left = tries_left
         print('tries left:', tries_left)
         self.swinging = False
@@ -80,9 +94,7 @@ class Golf(Program):
         self.set_word(0)
 
     def update_blink_animation(self):
-        """
-        Called every frame to control blinking rate of "target hole"
-        """
+        """Toggle the blinking target hole at the configured duty cycle."""
         elapsed_ticks = self.tick - self.last_blink_toggle
         if elapsed_ticks >= self.ticks_to_wait[self.blink_on]:
             self.blink_on = not self.blink_on
@@ -92,13 +104,19 @@ class Golf(Program):
             self.refresh_word() # blink even if no one is calling set_word (e.g. in waiting state)
             #self.game.lasers.set_value(self.goal, self.blink_on)
 
-    def get_velocity(self,t, max_v=20,max_pow=12.9):
+    def get_velocity(self, t, max_v=20, max_pow=12.9):
+        """Compute swing power/velocity from the charge time ``t`` (sine curve)."""
         s = 0.5 + 0.5*sin(2*pi*t/2 - pi/2)
         self.power_index = floor(max_pow*s)
         #print(self.power_index)
         self.v = max_v*s
 
-    def get_displacement_index(self,t,c=1):
+    def get_displacement_index(self, t, c=1):
+        """Return the laser index the ball has reached at roll time ``t``.
+
+        Uses exponential decay toward ``v/c``. Returns None if the ball rolls
+        off the end (index > 13).
+        """
         self.d = -(self.v/c)*(math.e**(-c*t)) + self.v/c
         index = math.floor(self.d)
         if index > 13:
@@ -106,11 +124,13 @@ class Golf(Program):
         return index
 
     def start_swinging(self):
+        """Begin charging the swing (records the start time)."""
         #print(inspect.stack()[0][3])
         self.swinging = True
         self.swing_start = time.time()
 
     def stop_swinging(self):
+        """End charging; freeze the final power and the resting displacement."""
         if not self.swinging:
             print('erroneous call to stop_swinging ignored.')
             return
@@ -120,6 +140,7 @@ class Golf(Program):
         self.end_displacement_index = self.get_displacement_index(t=self.max_roll_time)
 
     def start_rolling(self):
+        """Begin the rolling phase (records the start time)."""
         if self.rolling:
             print('erroneous call to start_rolling ignored.')
             return
@@ -128,10 +149,17 @@ class Golf(Program):
         self.roll_start = time.time()
 
     def stop_rolling(self):
+        """End the rolling phase."""
         #print(inspect.stack()[0][3])
         self.rolling = False
 
     def set_word(self, word, with_target = True):
+        """Write ``word`` to the lasers, OR-ing in the blinking target hole.
+
+        Args:
+            word: The base laser bitmask (cached without the target bit).
+            with_target: If True and the blink is on, also light the target.
+        """
         self.prev_word = word # cache word without goal bit or'd in
         if with_target and self.blink_on:
             word |= 2**self.goal
@@ -139,14 +167,17 @@ class Golf(Program):
         self.game.lasers.set_word(word)
 
     def refresh_word(self):
+        """Re-apply the cached word (used to keep the target blinking)."""
         self.set_word(self.prev_word)
 
     def fall_off(self):
+        """Handle the ball rolling off the end: clear lasers, play the splash."""
         print(inspect.stack()[0][3])
         self.set_word(0, with_target = False)
         self.game.mixer.play_effect(self.fall_off_sound)
 
     def celebrate(self):
+        """Score the goal; finish the game or set up the next round."""
         print('you won!')
         self.goals_scored += 1
         self.game.mixer.play_effect(self.win_sound)
@@ -158,6 +189,7 @@ class Golf(Program):
             self.after(3000, self.reset, random.randint(8,13))
 
     def complete(self):
+        """Play the final celebration, then quit after it finishes."""
         self.game.mixer.play_effect(self.congrats_sound)
         self.win_animation.start()
         print('golf game complete...')
@@ -165,10 +197,12 @@ class Golf(Program):
         #self.advance_program_or_exit() # TODO
 
     def quit(self):
+        """Hand control back to the state machine."""
         # cleanup
         super().quit()
 
     def play_voice_feedback(self, displacement_index):
+        """Play a spoken line describing how close the ball stopped to the goal."""
         if displacement_index is None:
             # fell off the edge
             feedback = self.voice_feedback[-1]
@@ -189,6 +223,7 @@ class Golf(Program):
         self.game.mixer.play_effect(feedback)
 
     def roll(self):
+        """Advance the rolling ball one frame: light its port, sound it, or stop."""
         roll_time = time.time() - self.roll_start
         displacement_index = self.get_displacement_index(roll_time)
         if displacement_index is None:
@@ -211,7 +246,8 @@ class Golf(Program):
             #print('reached end port (ball stopped) at:', displacement_index)
             self.grade_roll(displacement_index)
 
-    def grade_roll(self,displacement_index):
+    def grade_roll(self, displacement_index):
+        """Judge where the ball stopped: win, retry, or start a new round."""
         self.stop_rolling()
         self.grading = True
         self.play_voice_feedback(displacement_index)
@@ -225,10 +261,11 @@ class Golf(Program):
             print('You lost this round. Starting new round.')
             self.after(1000, self.reset, random.randint(8,13))
 
-    def release_pending_buttons(self): 
-        """
-        Used for anti-jitter protection upon physical button release.
-        Adds a small delay before triggering actions based on button releases.
+    def release_pending_buttons(self):
+        """Anti-jitter: after a short delay, treat a button release as a swing.
+
+        Adds a small delay before acting on a physical release so contact
+        bounce doesn't trigger a premature swing.
         """
         to_release = []
         for key, deadline in self.release_pending.items():
@@ -243,9 +280,7 @@ class Golf(Program):
 
 
     def update(self, dt):
-        """
-        Called every frame, whether state has changed or not.
-        """
+        """Per-frame: drive blink/charge/roll, and handle button & toggle events."""
         super().update(dt)
         self.update_blink_animation()
         self.program_t += dt
@@ -266,11 +301,11 @@ class Golf(Program):
                     self.release_pending.pop(event.key)
                 if event.key in self.buttons and not (self.swinging or self.rolling or self.grading):
                     self.start_swinging()
-                    
+
             elif event.type == EventType.BUTTON_UP:
                 print('button up fired')
                 # anti-jitter protection
-                if event.key in self.buttons and self.swinging and not (self.rolling or self.grading): 
+                if event.key in self.buttons and self.swinging and not (self.rolling or self.grading):
                     # make sure no release is currently pending
                     if self.release_pending:
                         continue

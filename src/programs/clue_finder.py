@@ -1,3 +1,9 @@
+"""ClueFinder: spell a hidden "clue phrase" using buttons + toggle-selected banks.
+
+Each toggle state selects a word bank (nouns/verbs/adverbs/numbers); pressing a
+button speaks a word from the active bank. Entering the correct ordered sequence
+of ``(button, toggle)`` pairs solves a clue. Solving every clue wins.
+"""
 from .base import *
 from ..event_loop import *
 from ..animation import Animation, ping_pong, random_k_dance
@@ -6,6 +12,12 @@ from collections import deque
 import os
 
 class ClueFinder(Program):
+    """Spell ordered ``(button, toggle)`` "clue phrases" to win.
+
+    Toggles pick the active word bank (:attr:`patch_map`); buttons speak words
+    from it. :attr:`clues` lists the target phrases.
+    """
+
     def __init__(self):
         super().__init__()
         self.default_action = self.button_pressed
@@ -21,6 +33,7 @@ class ClueFinder(Program):
         self.clues = [((0,0),(7,1),(3,2),(6,0))] # (button_id, toggle_state [i.e. patch_map index])
 
     def clue_success(self):
+        """Advance to the next clue; on the last, celebrate and stop input."""
         self.clue_idx += 1
         print(f'you found Clue Phrase # {self.clue_idx}!')
         if self.clue_idx >= len(self.clues):
@@ -30,11 +43,18 @@ class ClueFinder(Program):
             self.playing = False
 
     def celebrate(self):
+        """Play the win sound + animation, then quit after it finishes."""
         self.game.mixer.play_effect(self.congrats_sound)
         self.success_anim.start()
         self.after(self.win_dur*1000, self.quit)
-        
+
     def check_for_clue_success(self, clue_phrase_length=4, max_sequence_length=4):
+        """Test recent button presses against the current clue phrase, in order.
+
+        Args:
+            clue_phrase_length: Number of words in the clue to match.
+            max_sequence_length: How many recent BUTTON_DOWN events to consider.
+        """
         print('seq:', clue_phrase_length, max_sequence_length)
         current_clue = self.clues[self.clue_idx]
         phrase_word_index = 0
@@ -49,10 +69,12 @@ class ClueFinder(Program):
                 self.clue_success()
 
     def quit(self):
+        """Hand control back to the state machine."""
         # cleanup would happen here (nothing to cleanup?)
         super().quit()
 
     def start(self):
+        """Select the initial word bank, loop ambience, and load win assets."""
         initial_toggle_state = self.game.input_manager.state.toggles
         self.game.mixer.use_patch(self.patch_map[initial_toggle_state])
         self.game.mixer.load_music('ocean_sounds22050.wav', loops=-1)
@@ -67,15 +89,14 @@ class ClueFinder(Program):
         self.playing = True
         self.clue_idx = 0
         self.button_down_history = deque(maxlen=100)
-        
+
     def button_pressed(self, state: State):
+        """Default trigger action: log the pressed state (debug)."""
         print('clue finder got:', state, int(state))
 
 
     def update(self, dt):
-        """
-        Called every frame, whether state has changed or not.
-        """
+        """Speak a word on button-down; check the clue on button-up; swap bank on toggle."""
         super().update(dt)
         if not self.playing:
             return
@@ -104,6 +125,6 @@ class ClueFinder(Program):
         # todo: set output state...
 
         #sequence_action = self.match_sequence_triggers(maxlen=3)
-        
+
 
 ClueFinder()
