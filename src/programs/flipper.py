@@ -27,7 +27,10 @@ class Flipper(Program):
     def create_board_pattern(self, diffuclty=0, fixed=None):
         """Populate the board (random, or a ``fixed`` pattern) and show it."""
         if fixed:
-            self.board = fixed
+            # copy, never alias: flip() mutates self.board in place, so binding
+            # it directly to a caller-owned list (e.g. config.Flipper.START_BOARD)
+            # would corrupt that list across runs and leak state between entries.
+            self.board = list(fixed)
             print(fixed)
         else:
             for i in range(len(self.board)):

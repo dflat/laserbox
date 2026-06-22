@@ -31,7 +31,8 @@ class config:
 
     class Flipper:
         """Settings for :class:`~src.programs.flipper.Flipper`."""
-        START_BOARD = [1, 0, 1, 0, 1, 0]
+        # tuple (immutable) so it can't be mutated in place if ever aliased.
+        START_BOARD = (1, 0, 1, 0, 1, 0)
 
     class Golf:
         """Settings for :class:`~src.programs.golf.Golf`."""
