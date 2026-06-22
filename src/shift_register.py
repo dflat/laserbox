@@ -1,7 +1,7 @@
 import time
 import sys
 from .config import config
-if sys.platform == 'linux':
+if sys.platform == 'linux' and '-s' not in sys.argv:
     import RPi.GPIO as GPIO
 
 class OutputShiftRegister:

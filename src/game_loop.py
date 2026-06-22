@@ -9,7 +9,7 @@ from .programs import State, StateSequence, StateMachine
 from .event_loop import *
 from .animation import Animation
 from .io_managers import InputManager, OutputManager
-if sys.platform == 'linux':
+if sys.platform == 'linux' and '-s' not in sys.argv:
   import RPi.GPIO as GPIO
 
 if '-p' in sys.argv:
