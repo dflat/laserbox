@@ -3,3 +3,4 @@
 .venv/
 assets/*
 stats
+docs/dev/_build/

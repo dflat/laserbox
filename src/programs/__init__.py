@@ -7,3 +7,4 @@ from .trivia import Trivia
 from .flipper import Flipper
 from .golf import Golf
 from .toggle_pattern import TogglePattern
+from .example_program import ExampleProgram
