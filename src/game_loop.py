@@ -9,6 +9,7 @@ single 16-bit word each frame). On the desktop this class is subclassed by
 """
 import sys
 import time
+import signal
 from collections import deque, namedtuple
 import pygame
 from .audio_utils import Mixer
@@ -169,39 +170,73 @@ class Game:
     self.outputs.push_word(laser_state_word)
 
   def run(self):
-    """Run the main loop until KeyboardInterrupt (or an error)."""
+    """Run the main loop until a stop signal, KeyboardInterrupt, or an error.
+
+    A SIGTERM/SIGINT handler (installed here, *after* pygame is up so it wins
+    over any handler SDL installed) flips ``_running`` so the loop exits
+    promptly. That is what lets ``systemctl stop`` shut the box down in well
+    under a second instead of waiting out systemd's kill timeout. Whatever the
+    exit path, the ``finally`` clears the lasers and releases GPIO/pygame.
+    """
     self._running = True
     self.t_game_start = time.time()
     self.clock = GameClock(self.FPS)
+    self._install_signal_handlers()
+    self.lasers.set_word(0)  # begin with every laser off
+    self.render()
     dts = []
     dt = 1000/self.FPS
     try:
-        while True:
+        while self._running:
           self.update(dt)
           self.render()
           dt = self.clock.tick(self.FPS)
           dts.append(dt)
     except KeyboardInterrupt:
         print('goodbye.')
-        print('avg dt:', sum(dts)/len(dts))
-        self.quit()
-    except Exception as e:
+    finally:
+        if dts:
+          print('avg dt:', sum(dts)/len(dts))
         self.cleanup()
-        raise RuntimeError('crashed...') from e
-    #finally:
-    #    self.quit()
+
+  def _install_signal_handlers(self):
+    """Stop the loop cleanly on SIGTERM/SIGINT (e.g. ``systemctl stop``).
+
+    Installed from :meth:`run` (after pygame init) so it overrides any signal
+    handler SDL set up -- otherwise SIGTERM is swallowed and shutdown stalls.
+    """
+    def _handle(signum, _frame):
+        print(f'received signal {signum}; shutting down.')
+        self._running = False
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, _handle)
 
   def cleanup(self):
-    """Release GPIO resources."""
+    """Turn off the lasers, silence audio, and release GPIO + pygame.
+
+    Idempotent, and safe on both hardware and the simulator: GPIO is only
+    touched when the real ``RPi.GPIO`` module was imported (Linux, no ``-s``).
+    """
+    if getattr(self, '_cleaned_up', False):
+        return
+    self._cleaned_up = True
     self._running = False
-    GPIO.cleanup()
-    print('cleaned up.')
+    try:
+        self.outputs.push_word(0)  # physically clear all lasers
+    except Exception as e:
+        print('laser-off on shutdown failed:', e)
+    try:
+        self.mixer.stop_all()
+    except Exception as e:
+        print('audio stop on shutdown failed:', e)
+    if sys.platform == 'linux' and '-s' not in sys.argv:
+        GPIO.cleanup()
+    pygame.quit()
+    print('clean shutdown complete.')
 
   def quit(self):
-    """Clean up, shut down pygame, and exit the process."""
+    """Clean up and exit the process (hard exit for external callers)."""
     self.cleanup()
-    pygame.quit()
-    print('quitting.')
     sys.exit()
 
 if __name__ == "__main__":
