@@ -38,6 +38,16 @@ class config:
         """Settings for :class:`~src.programs.golf.Golf`."""
         GOALS_TO_COMPLETE = 3
 
+    class SimonSays:
+        """Settings for :class:`~src.programs.simon_says.SimonSays`."""
+        PLAY_BUTTONS = (0, 1, 2, 3, 4, 5)  # front-row lasers/buttons in play
+        WIN_LENGTH = 5                     # pattern length that wins the game
+        LIVES = 3                          # mistakes allowed before a restart
+        ON_MS = 450                        # how long each demo step stays lit
+        GAP_MS = 200                       # dark gap between demo steps
+        IDLE_MS = 15000                    # re-show pattern after this idle time
+        PATCH = "kicks_ascending_mono"     # one ascending tone per button
+
     class GameSelect:
         """Settings for :class:`~src.programs.game_select.GameSelect`."""
         # --- entry gesture ---
@@ -60,4 +70,5 @@ class config:
             2: ("ClueFinder", "clue_finder.wav"),
             3: ("MusicMaker", "music_maker.wav"),
             4: ("BirthdayComposer", "birthday.wav"),
+            5: ("SimonSays", "simon_says.wav"),
         }
