@@ -33,6 +33,10 @@ class SimonSays(Program):
     # mistake_{remaining}.wav lines, keyed by how many lives are left after a miss.
     MISTAKE_VOICE = {n: os.path.join("simon", f"mistake_{n}.wav")
                      for n in range(1, config.SimonSays.LIVES)}
+    # Random affirmation played when a round is cleared, to mark the hand-off
+    # between the player's turn and the next demo.
+    AFFIRM_VOICES = [os.path.join("simon", f"{w}.wav")
+                     for w in ("good", "nice", "swell")]
 
     ECHO_COOLDOWN_MS = 120   # debounce so a bouncing button doesn't double-fire
 
@@ -48,13 +52,15 @@ class SimonSays(Program):
         self.max_lives = cfg.LIVES
         self.on_ms = cfg.ON_MS
         self.gap_ms = cfg.GAP_MS
+        self.cheer_ms = cfg.CHEER_MS
         self.idle_ms = cfg.IDLE_MS
 
         # Audio: ascending kicks per step, plus spoken/buzzer feedback. Loaded in
         # start() (not __init__) so it is valid against the current mixer.
         self.game.mixer.use_patch(cfg.PATCH)
         for name in (self.WELCOME, self.WIN_VOICE, self.GAMEOVER_VOICE,
-                     self.BUZZ, self.HOORAY, *self.MISTAKE_VOICE.values()):
+                     self.BUZZ, self.HOORAY, *self.MISTAKE_VOICE.values(),
+                     *self.AFFIRM_VOICES):
             self.game.mixer.load_effect(name)
 
         # Run state: reset everything since start() may run more than once.
@@ -136,7 +142,7 @@ class SimonSays(Program):
         for k, step in enumerate(self.pattern):
             self.after(k * step_ms, self._show_step, step)
             self.after(k * step_ms + self.on_ms, self._hide_step, step)
-        self.after(len(self.pattern) * step_ms + 250, self._your_turn)
+        self.after(len(self.pattern) * step_ms + 250, self._start_input)
 
     def _show_step(self, step):
         self.game.lasers.turn_on(step)
@@ -144,11 +150,6 @@ class SimonSays(Program):
 
     def _hide_step(self, step):
         self.game.lasers.turn_off(step)
-
-    def _your_turn(self):
-        """Quick all-row blink to mark the hand-off, then open input."""
-        self._set_play_lasers(True)
-        self.after(150, self._start_input)
 
     def _start_input(self):
         self._clear_play_lasers()
@@ -166,7 +167,10 @@ class SimonSays(Program):
         self.accepting_input = False
         if len(self.pattern) >= self.win_length:
             return self.win()
-        self.after(700, self._grow_and_replay)
+        # Random "Good!/Nice!/Swell!" marks the end of the player's turn before
+        # the next demo begins.
+        self.game.mixer.play_effect(random.choice(self.AFFIRM_VOICES))
+        self.after(self.cheer_ms, self._grow_and_replay)
 
     def _grow_and_replay(self):
         self.pattern.append(random.choice(self.play_buttons))
