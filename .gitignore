@@ -1,6 +1,6 @@
 *.swp
 **/__pycache__/
 .venv/
-assets/*
 stats
 docs/dev/_build/
+.DS_Store

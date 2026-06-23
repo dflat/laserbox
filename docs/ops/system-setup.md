@@ -27,10 +27,10 @@
 2. Base config (raspi-config / imager): hostname `rzero`, timezone
    `America/New_York`, **console autologin for `pi`**, enable SSH.
 3. Edit `/boot/firmware/config.txt` → audio routing + disable BT (§Rebuild 3).
-4. `sudo apt install -y python3-pygame python3-rpi.gpio git`.
+4. `sudo apt install -y python3-pygame python3-rpi.gpio git git-lfs`.
 5. Authorize SSH keys (§Rebuild 5); set up the Pi's GitHub key or clone via HTTPS.
-6. `git clone` the repo to `/home/pi/electronics/laserbox` **and rsync the
-   `assets/` audio** (assets are gitignored — clone alone is not enough).
+6. `git clone` the repo to `/home/pi/electronics/laserbox`, then `git lfs pull`
+   to fetch the audio (LFS blobs live on the desktop's Forgejo — see §3.6).
 7. Install the systemd **user** service (§2.2), `enable-linger`, enable it.
 8. Disable the non-essential services (§2.4).
 9. Reboot and run the verification checklist (§4).
@@ -147,7 +147,8 @@ These are *code* fixes, deployed by `git pull` on the Pi, not system config:
 - `fix(Flipper): stop leaking board state across re-entries` (`5609d37`).
 
 To redeploy code: `git -C /home/pi/electronics/laserbox pull --ff-only` then
-`systemctl --user restart laserbox`.
+`systemctl --user restart laserbox`. New **audio** comes via Git LFS:
+`git -C /home/pi/electronics/laserbox lfs pull` (the desktop's Forgejo must be on).
 
 ---
 
@@ -198,13 +199,17 @@ strictly required for the service to start, but it matches the working setup.
 - ALSA `bcm2835` `PCM` playback volume set to **~97% (+1.25 dB)**. Adjust with
   `amixer -c <card> sset PCM <pct>%` or via PipeWire/`wpctl`.
 
-### 3.6 Repo + assets layout  ⚠️ assets are NOT in git
+### 3.6 Repo + assets layout  (audio = Git LFS)
 - Repo cloned to `/home/pi/electronics/laserbox`, remote
   `git@github.com:dflat/laserbox.git`, branch `main`.
-- **`assets/` (audio) is `.gitignore`d** and managed outside git — a fresh
-  `git clone` will be missing all sound files and the app's audio will fail to
-  load. The `assets/sounds/**` tree must be **rsync'd/copied** onto the box
-  (this is what the `rsync-laserbox` key is for).
+- **`assets/` (audio) is tracked with Git LFS**, but the blobs are **not** on
+  GitHub — they live on a self-hosted Forgejo on rjr's desktop
+  (`http://192.168.1.246:3000/rjr/laserbox`; committed `.lfsconfig` points every
+  clone there). A fresh `git clone` fetches only tiny LFS *pointer* files; run
+  `git lfs pull` to download the actual audio. **The desktop must be powered on**
+  for any `git lfs pull/push`.
+- Auth to the store is an HTTP token (username `rjr`, the `laserbox-lfs` token);
+  the git credential helper stores it after the first prompt.
 
 ### 3.7 Other (pre-existing, not laserbox-related)
 - Extra `sudoers.d` drop-ins exist: `010_pi-nopasswd` (stock RPi: `pi` =
@@ -249,7 +254,7 @@ CFG
 **3. Packages:**
 ```bash
 sudo apt update
-sudo apt install -y python3-pygame python3-rpi.gpio git rsync
+sudo apt install -y python3-pygame python3-rpi.gpio git git-lfs
 ```
 
 **4. SSH keys:**
@@ -266,13 +271,15 @@ chmod 600 ~/.ssh/authorized_keys
 #   (then add ~/.ssh/id_ed25519.pub to the dflat/laserbox GitHub deploy keys)
 ```
 
-**5. Code + assets:**
+**5. Code + assets (audio via Git LFS):**
 ```bash
 mkdir -p /home/pi/electronics
+git lfs install
 git clone git@github.com:dflat/laserbox.git /home/pi/electronics/laserbox
-# OR https: git clone https://github.com/dflat/laserbox.git /home/pi/electronics/laserbox
-# >>> copy the audio assets (NOT in git) <<<
-#   from the dev machine:  rsync -av assets/ box-ether:/home/pi/electronics/laserbox/assets/
+cd /home/pi/electronics/laserbox
+# fetch the audio blobs from the desktop's Forgejo LFS store (desktop must be ON).
+# first pull prompts for credentials: username 'rjr' + the laserbox-lfs token.
+git lfs pull
 ```
 
 **6. systemd user service** — create
