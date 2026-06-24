@@ -68,6 +68,35 @@ class config:
         IDLE_MS = 15000  # re-show pattern after this idle time
         PATCH = "kicks_ascending_mono"  # one ascending tone per button
 
+    class Catch:
+        """Settings for :class:`~src.programs.catch.Catch`."""
+
+        TARGET = 3            # the fixed target laser/button to "catch" the blip on
+        N_PORTS = 14          # lasers the blip travels across (0 .. N_PORTS-1)
+        BLINK_HZ = 2          # target blink rate while waiting/chasing (twice a sec)
+
+        # ms per blip move at each progression level; each level is faster than
+        # the last. The player climbs one level per successful catch (the blip
+        # bounces forever until they press); a miss restarts from level 1. The
+        # first is the spec's 120 ms (~8.3 moves/sec). Length sets the level count
+        # and must match ``LEVEL_SOUNDS``.
+        LEVEL_STEP_MS = (120, 90, 65)
+
+        LEVEL_ADVANCE_MS = 1500   # pause (under the announcement) between levels
+        MISS_RESET_MS = 2000      # pause after a miss before re-arming at level 1
+
+        # Voice / sfx, paths under assets/sounds/effects. The announcements are
+        # edge-tts (en-AU-WilliamMultilingualNeural); the level lines double as
+        # the "nice catch" feedback. The round-3 win reuses Golf's celebration.
+        INTRO_SOUND = "catch/intro.wav"
+        LEVEL_SOUNDS = (
+            "catch/level_1.wav",
+            "catch/level_2.wav",
+            "catch/level_3.wav",
+        )
+        MISS_SOUND = "catch/miss.wav"
+        WIN_SOUND = "positive/congrats_extended.wav"   # Golf-style big celebration
+
     class GameSelect:
         """Settings for :class:`~src.programs.game_select.GameSelect`."""
 
@@ -93,6 +122,7 @@ class config:
             4: ("BirthdayComposer", "birthday.wav"),
             5: ("SimonSays", "simon_says.wav"),
             6: ("Trivia", "trivia.wav"),
+            7: ("Catch", "catch.wav"),
         }
 
         # --- system power actions (last two physical buttons) ---

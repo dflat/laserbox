@@ -8,4 +8,5 @@ from .flipper import Flipper
 from .golf import Golf
 from .toggle_pattern import TogglePattern
 from .simon_says import SimonSays
+from .catch import Catch
 from .example_program import ExampleProgram
