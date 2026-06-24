@@ -62,11 +62,12 @@ class RecordingSilentVoice:
     """SilentVoice-alike: plays nothing, fires on_done now, counts interrupts."""
     def __init__(self):
         self.interrupts = 0
+        self.lines = []
     def _done(self, on_done):
         if on_done:
             on_done()
     def preload(self, questions): pass
-    def say_line(self, key, on_done=None): self._done(on_done)
+    def say_line(self, key, on_done=None): self.lines.append(key); self._done(on_done)
     def say_question(self, q, number=None, on_done=None, with_intro=True): self._done(on_done)
     def say_choice(self, q, slot, on_done=None): self._done(on_done)
     def say_correct_answer(self, q, on_done=None): self._done(on_done)
@@ -147,6 +148,7 @@ def main():
     n0 = voice.interrupts
     press(BLACK_BUZZ)  # buzz during the question
     check("A: buzz interrupts the question audio", voice.interrupts == n0 + 1)
+    check("A: buzz announces the buzzing team", "black_team" in voice.lines)
     check("A: phase ANSWERING, black owns it", triv.phase is trivia_mod._Phase.ANSWERING
           and triv.current_team == "black" and triv.current_stakes == "first")
 
@@ -198,6 +200,36 @@ def main():
     check("C: timeout = a miss (-1) and steal handed to black",
           triv.score["white"] == -1 and triv.current_team == "black"
           and triv.current_stakes == "steal")
+
+    # === Scenario D: an armed-but-unconfirmed choice is auto-picked on timeout ===
+    triv, voice = launch([Q("d1", 2)], match_length=1)
+    press(BLACK_BUZZ); press(WHITE_BUZZ)
+    press(BLACK_BUZZ)                       # black buzzes
+    press(BLACK[2])                         # ARM the correct slot (2), do NOT confirm
+    check("D: choice armed, not locked", triv.armed_slot == 2
+          and triv.phase is trivia_mod._Phase.ANSWERING)
+    triv.answer_deadline = triv.tick - 1    # force the lock-in deadline to expire
+    step(0)
+    check("D: timeout auto-locks the armed (correct) choice -> +2",
+          triv.score["black"] == 2)
+    check("D: match ended, back at GameSelect", name() == "GameSelect")
+
+    # === Scenario E: steal laser hygiene when the first team times out unanswered ===
+    # Regression: the first team's endcap must not linger once the steal lights up
+    # (it never armed a choice, so only set_word(0) used to "clear" it -- which
+    # left LaserBay's port state stale and re-lit it).
+    triv, voice = launch([Q("e1", 0)], match_length=1)
+    press(BLACK_BUZZ); press(WHITE_BUZZ)
+    press(BLACK_BUZZ)                          # black buzzes, then never arms a choice
+    triv.answer_deadline = triv.tick - 1       # time out with NO choice armed
+    step(0)
+    check("E: steal handed to white", triv.current_team == "white"
+          and triv.current_stakes == "steal")
+    check("E: black endcap cleared once white's turn lights",
+          not (sipo.last & (1 << BLACK_BUZZ)))
+    check("E: white endcap lit for the steal", bool(sipo.last & (1 << WHITE_BUZZ)))
+    press(WHITE[0])                            # white arms a choice
+    check("E: arming leaves only the chosen laser lit", sipo.last == (1 << WHITE[0]))
 
     print()
     if all(passed):

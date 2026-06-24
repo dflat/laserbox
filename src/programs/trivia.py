@@ -57,6 +57,7 @@ class Trivia(Program):
     BUZZ_IN = os.path.join("positive", "achievement_unlocked.wav")  # a team buzzes
     CORRECT = os.path.join("positive", "hooray.wav")
     WRONG = os.path.join("simon", "buzz.wav")
+    CONGRATS = os.path.join("positive", "congrats_extended.wav")    # match-end fanfare
 
     # Feedback / pacing windows (ms).
     READY_BEAT_MS = 600        # pause after both teams are in, before "let's begin"
@@ -73,7 +74,7 @@ class Trivia(Program):
         self.cfg = config.Trivia
         self._setup_mappings()
         self._reset_run_state()
-        self.game.lasers.set_word(0)
+        self._all_off()
 
         self.source, self.voice = self._make_strategy()
         if self.source is None:
@@ -92,7 +93,7 @@ class Trivia(Program):
 
     def quit(self):
         """Clear the lasers and hand control back to the state machine."""
-        self.game.lasers.set_word(0)
+        self._all_off()
         super().quit()
 
     def _setup_mappings(self):
@@ -121,6 +122,7 @@ class Trivia(Program):
         self.buzz_deadline = None
         self.ready_deadline = None
         self.ready = {"black": False, "white": False}
+        self._warned = False    # has the 5-second warning fired for the active window
 
     def _make_strategy(self):
         """Return a prepared ``(source, voice)``, falling back live -> bank.
@@ -155,15 +157,25 @@ class Trivia(Program):
 
     def _check_timers(self):
         tick = self.tick
-        if self.phase is _Phase.ASKING:
-            if self.buzz_deadline is not None and tick > self.buzz_deadline:
+        if self.phase is _Phase.ASKING and self.buzz_deadline is not None:
+            self._maybe_warn(self.buzz_deadline)
+            if tick > self.buzz_deadline:
                 self._no_buzz_timeout()
-        elif self.phase is _Phase.ANSWERING:
-            if self.answer_deadline is not None and tick > self.answer_deadline:
+        elif self.phase is _Phase.ANSWERING and self.answer_deadline is not None:
+            self._maybe_warn(self.answer_deadline)
+            if tick > self.answer_deadline:
                 self._answer_timeout()
         elif self.phase is _Phase.READY:
             if self.ready_deadline is not None and tick > self.ready_deadline:
                 self._reprompt_ready()
+
+    def _maybe_warn(self, deadline):
+        """Announce 'five seconds remaining' once, WARNING_MS before a deadline."""
+        if self._warned:
+            return
+        if self.tick >= deadline - self._ticks(self.cfg.WARNING_MS):
+            self._warned = True
+            self.voice.say_line("five_seconds_remaining")
 
     def _on_button_down(self, button):
         if self.phase is _Phase.READY:
@@ -178,7 +190,7 @@ class Trivia(Program):
     def _enter_ready(self):
         self.phase = _Phase.READY
         self.ready = {"black": False, "white": False}
-        self.game.lasers.set_word(0)
+        self._all_off()
         self.ready_deadline = self.tick + self._ticks(self.cfg.READY_REPROMPT_MS)
         self.voice.say_line("ready_prompt")
 
@@ -199,7 +211,7 @@ class Trivia(Program):
             self.after(self.READY_BEAT_MS, self._begin_match)
 
     def _begin_match(self):
-        self.game.lasers.set_word(0)
+        self._all_off()
         self.voice.say_line("lets_begin", on_done=self._next_question)
 
     # -- question flow ------------------------------------------------------
@@ -216,7 +228,7 @@ class Trivia(Program):
         self.buzz_deadline = None
         self.first_team = None
         self.armed_slot = None
-        self.game.lasers.set_word(0)
+        self._all_off()
         self.voice.say_question(self.question, self._ordinal(),
                                 on_done=self._question_fully_read)
 
@@ -224,6 +236,7 @@ class Trivia(Program):
         """Question read out with no buzz -> open a short post-question window."""
         if self.phase is _Phase.ASKING:
             self.buzz_deadline = self.tick + self._ticks(self.cfg.POST_QUESTION_BUZZ_MS)
+            self._warned = False
 
     def _asking_buzz(self, button):
         team = self.team_of_buzz.get(button)
@@ -232,16 +245,17 @@ class Trivia(Program):
         self.voice.interrupt()              # cut the question audio instantly
         self.buzz_deadline = None
         self.first_team = team
-        self.game.lasers.set_word(0)
+        self._all_off()
         self.game.lasers.turn_on(self.endcap[team])
         self.game.mixer.play_effect(self.BUZZ_IN)
+        self.voice.say_line(f"{team}_team")  # confirm aloud who buzzed in first
         self._begin_answer(team, "first")
 
     def _no_buzz_timeout(self):
         """Nobody buzzed: reveal the answer, no score, then announce + advance."""
         self.phase = _Phase.RESOLVING
         self.buzz_deadline = None
-        self.game.lasers.set_word(0)
+        self._all_off()
         self.voice.say_correct_answer(self.question, on_done=self._score_announce)
 
     # -- answering (arm / confirm) -----------------------------------------
@@ -251,6 +265,7 @@ class Trivia(Program):
         self.current_stakes = stakes
         self.armed_slot = None
         self.answer_deadline = self.tick + self._ticks(self.cfg.ANSWER_TIMEOUT_MS)
+        self._warned = False
 
     def _answering_press(self, button):
         mapping = self.choice_of_button.get(button)
@@ -260,16 +275,16 @@ class Trivia(Program):
         if team != self.current_team:
             return  # the other team's buttons are inert during this turn
         self.answer_deadline = self.tick + self._ticks(self.cfg.ANSWER_TIMEOUT_MS)
+        self._warned = False               # activity resets the countdown + warning
         if slot == self.armed_slot:
             self._lock_in(slot)            # second press of the armed choice
         else:
             self._arm_choice(team, slot)   # arm (or re-arm to) this choice
 
     def _arm_choice(self, team, slot):
-        # first arm clears the buzz-in endcap; only one of a team's choices lit
-        self.game.lasers.turn_off(self.endcap[team])
-        for button in self.team_choices[team]:
-            self.game.lasers.turn_off(button)
+        # clear every laser first so the *other* team's laser is always off once
+        # this team's choice lights (covers the steal hand-off), then light it.
+        self._all_off()
         self.game.lasers.turn_on(self.team_choices[team][slot])
         self.armed_slot = slot
         self.voice.say_choice(self.question, slot)
@@ -279,10 +294,13 @@ class Trivia(Program):
         self._resolve(slot == self.question.correct_index)
 
     def _answer_timeout(self):
-        """The answering team dithered past the deadline: counts as a miss."""
+        """Deadline hit: auto-pick an armed-but-unconfirmed choice, else a miss."""
         self.answer_deadline = None
         self.voice.interrupt()
-        self._resolve(False)
+        if self.armed_slot is not None:
+            self._lock_in(self.armed_slot)   # an armed choice becomes their final answer
+        else:
+            self._resolve(False)             # nothing armed -> a miss
 
     # -- resolution / steal -------------------------------------------------
     def _resolve(self, correct):
@@ -308,7 +326,7 @@ class Trivia(Program):
         self.phase = _Phase.STEAL_READING
         self.current_team = other
         self.armed_slot = None
-        self.game.lasers.set_word(0)
+        self._all_off()
         self.game.lasers.turn_on(self.endcap[other])   # "your turn" cue
         self.game.mixer.play_effect(self.BUZZ_IN)
         # steal cue, then re-read the FULL question so the early interruption
@@ -326,7 +344,7 @@ class Trivia(Program):
     # -- scoring / end ------------------------------------------------------
     def _score_announce(self):
         self.phase = _Phase.SCORING
-        self.game.lasers.set_word(0)
+        self._all_off()
         self.voice.say_score(self.score["black"], self.score["white"],
                              on_done=self._advance_after_score)
 
@@ -339,7 +357,7 @@ class Trivia(Program):
 
     def _end_match(self):
         self.phase = _Phase.DONE
-        self.game.lasers.set_word(0)
+        self._all_off()
         black, white = self.score["black"], self.score["white"]
         if black > white:
             key = "black_wins"
@@ -348,6 +366,7 @@ class Trivia(Program):
         else:
             key = "tie"
         if key != "tie":
+            self.game.mixer.play_effect(self.CONGRATS)   # fanfare under the dance
             random_k_dance(k=3, fps=8, dur=2.5).start()
         self.voice.say_line(key, on_done=lambda: self.after(self.END_BEAT_MS, self.quit))
 
@@ -372,6 +391,15 @@ class Trivia(Program):
             self.game.lasers.set_value(button, 1 if on else 0)
 
     # -- helpers ------------------------------------------------------------
+    def _all_off(self):
+        """Clear every laser via per-port writes. Plain ``set_word(0)`` leaves
+        LaserBay's per-port state stale, so a later ``turn_on`` recomputes the
+        word from ports and can re-light a laser that was 'cleared' (e.g. the
+        first team's endcap lingering into a steal when they never armed a
+        choice). Per-port turn_off keeps word and ports consistent."""
+        for laser_id in range(14):
+            self.game.lasers.turn_off(laser_id)
+
     def _ticks(self, ms):
         return max(1, int(config.FPS * ms / 1000))
 

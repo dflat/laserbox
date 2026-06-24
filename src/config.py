@@ -135,8 +135,9 @@ class config:
         CATEGORY = None               # None = any; else an OpenTDB category id (int)
 
         # --- timing (milliseconds) ---
-        ANSWER_TIMEOUT_MS = 8000      # lock-in deadline after a buzz; expiry == a fail
-        POST_QUESTION_BUZZ_MS = 4000  # buzz window after a question reads out untouched
+        ANSWER_TIMEOUT_MS = 30000     # lock-in deadline after a buzz (auto-picks an armed choice)
+        POST_QUESTION_BUZZ_MS = 30000  # buzz window after a question reads out untouched
+        WARNING_MS = 5000             # "five seconds remaining" warning before either deadline
         VO_GAP_MS = 120               # gap inserted between chained voice-over clips
         READY_REPROMPT_MS = 12000     # re-announce "buzz to begin" if a team stalls
 

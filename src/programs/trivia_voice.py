@@ -131,6 +131,7 @@ class PrebakedVoice(Voice):
         "ready_prompt": "vo/both_teams_buzz_to_begin.wav",
         "lets_begin": "vo/both_ready_lets_begin.wav",
         "no_buzz": "vo/no_one_buzzed.wav",
+        "five_seconds_remaining": "vo/five_seconds_remaining.wav",
         "correct_answer_is": "vo/the_correct_answer_is.wav",
         "steal_black": "vo/black_team_steal.wav",
         "steal_white": "vo/white_team_steal.wav",

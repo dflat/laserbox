@@ -52,6 +52,7 @@ STATIC_TEXT = {
     "vo/both_teams_buzz_to_begin.wav": "Both teams, buzz in to begin.",
     "vo/both_ready_lets_begin.wav": "Both teams are ready. Let's begin!",
     "vo/no_one_buzzed.wav": "Nobody buzzed in.",
+    "vo/five_seconds_remaining.wav": "Five seconds remaining.",
     "vo/the_correct_answer_is.wav": "The correct answer is:",
     "vo/black_team_steal.wav": "Black team, here is your chance to steal.",
     "vo/white_team_steal.wav": "White team, here is your chance to steal.",
@@ -191,15 +192,16 @@ def do_static(max_questions: int, max_score: int, force: bool):
     wrote = 0
     for rel, text in STATIC_TEXT.items():
         wrote += synth(text, rel, force)
-    # question ordinals: "Question one:" .. plus the sudden-death intro
+    # question ordinals: "First question:" .. plus the sudden-death intro. The
+    # ordinal leads (read as "first question", not "question first").
     for n in range(1, max_questions + 1):
-        ordinal = _ORDINALS[n] if n < len(_ORDINALS) else number_words(n)
-        wrote += synth(f"Question {ordinal}:", f"vo/question_{n}.wav", force)
+        ordinal = _ORDINALS[n] if n < len(_ORDINALS) else f"{number_words(n)}th"
+        wrote += synth(f"{ordinal.capitalize()} question:", f"vo/question_{n}.wav", force)
     wrote += synth("Sudden death! Question:", "vo/question_sudden.wav", force)
     # number clips for score read-out (0..max_score, plus "minus")
     for n in range(0, max_score + 1):
         wrote += synth(number_words(n), f"num/{n}.wav", force)
-    wrote += synth("minus", "num/minus.wav", force)
+    wrote += synth("negative", "num/minus.wav", force)
     # GameSelect menu announcement lives under effects/menu, not trivia/
     menu_wav = os.path.join(EFFECTS_ROOT, "menu", "trivia.wav")
     if force or not os.path.exists(menu_wav):
