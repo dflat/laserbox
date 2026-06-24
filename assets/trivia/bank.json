@@ -1,0 +1,85 @@
+{
+  "_note": "Starter offline trivia bank. Append-only / stable order so CURATED_PLAYLIST may reference positional indices. Each question's `id` names its audio folder under assets/sounds/effects/trivia/q/<id>/. choices are in frozen display order; correct_index points into them. Grow this with tools/trivia_sync.py.",
+  "questions": [
+    {
+      "id": "geo-aus-capital",
+      "category": "Geography",
+      "difficulty": "easy",
+      "question": "What is the capital city of Australia?",
+      "choices": ["Sydney", "Canberra", "Melbourne", "Perth"],
+      "correct_index": 1
+    },
+    {
+      "id": "sci-red-planet",
+      "category": "Science",
+      "difficulty": "easy",
+      "question": "Which planet is known as the Red Planet?",
+      "choices": ["Venus", "Jupiter", "Mars", "Saturn"],
+      "correct_index": 2
+    },
+    {
+      "id": "comp-cpu-acronym",
+      "category": "Science: Computers",
+      "difficulty": "medium",
+      "question": "What does the acronym CPU stand for?",
+      "choices": ["Central Process Unit", "Central Processing Unit", "Computer Personal Unit", "Central Processor Underflow"],
+      "correct_index": 1
+    },
+    {
+      "id": "math-hexagon-sides",
+      "category": "Mathematics",
+      "difficulty": "easy",
+      "question": "How many sides does a hexagon have?",
+      "choices": ["Five", "Six", "Seven", "Eight"],
+      "correct_index": 1
+    },
+    {
+      "id": "lit-romeo-juliet",
+      "category": "Literature",
+      "difficulty": "easy",
+      "question": "Who wrote the play Romeo and Juliet?",
+      "choices": ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
+      "correct_index": 1
+    },
+    {
+      "id": "sci-gold-symbol",
+      "category": "Science",
+      "difficulty": "medium",
+      "question": "What is the chemical symbol for gold?",
+      "choices": ["Gd", "Go", "Au", "Ag"],
+      "correct_index": 2
+    },
+    {
+      "id": "hist-moon-landing",
+      "category": "History",
+      "difficulty": "medium",
+      "question": "In which year did the first human walk on the Moon?",
+      "choices": ["1965", "1969", "1972", "1958"],
+      "correct_index": 1
+    },
+    {
+      "id": "geo-largest-ocean",
+      "category": "Geography",
+      "difficulty": "easy",
+      "question": "What is the largest ocean on Earth?",
+      "choices": ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+      "correct_index": 3
+    },
+    {
+      "id": "sci-photosynthesis-gas",
+      "category": "Science",
+      "difficulty": "medium",
+      "question": "Which gas do plants primarily absorb for photosynthesis?",
+      "choices": ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"],
+      "correct_index": 2
+    },
+    {
+      "id": "sci-hardest-substance",
+      "category": "Science",
+      "difficulty": "medium",
+      "question": "What is the hardest naturally occurring substance on Earth?",
+      "choices": ["Gold", "Iron", "Diamond", "Quartz"],
+      "correct_index": 2
+    }
+  ]
+}

@@ -92,6 +92,7 @@ class config:
             3: ("MusicMaker", "music_maker.wav"),
             4: ("BirthdayComposer", "birthday.wav"),
             5: ("SimonSays", "simon_says.wav"),
+            6: ("Trivia", "trivia.wav"),
         }
 
         # --- system power actions (last two physical buttons) ---
@@ -117,3 +118,55 @@ class config:
             "reboot": ["sudo", "systemctl", "reboot"],
             "poweroff": ["sudo", "systemctl", "poweroff"],
         }
+
+    class Trivia:
+        """Settings for :class:`~src.programs.trivia.Trivia`.
+
+        Two-player face-off: **Black team** (left half, keys 0-6) versus **White
+        team** (right half, keys 7-13). Each team buzzes with its endcap button
+        and answers on its four choice buttons. Choice *slot* ``i`` (0..3) maps to
+        ``BLACK_CHOICES[i]`` / ``WHITE_CHOICES[i]`` so the two halves are mirror
+        images (black button 0 == white button 13, etc.).
+        """
+
+        # --- match shape ---
+        QUESTIONS_PER_MATCH = 7       # questions per match; highest score wins
+        DIFFICULTY = "any"            # any | easy | medium | hard (OpenTDB filter)
+        CATEGORY = None               # None = any; else an OpenTDB category id (int)
+
+        # --- timing (milliseconds) ---
+        ANSWER_TIMEOUT_MS = 8000      # lock-in deadline after a buzz; expiry == a fail
+        POST_QUESTION_BUZZ_MS = 4000  # buzz window after a question reads out untouched
+        VO_GAP_MS = 120               # gap inserted between chained voice-over clips
+        READY_REPROMPT_MS = 12000     # re-announce "buzz to begin" if a team stalls
+
+        # --- teams (named for the keycap colours on each half of the box) ---
+        BLACK_BUZZ = 6                # left endcap
+        WHITE_BUZZ = 7                # right endcap
+        BLACK_CHOICES = (0, 1, 2, 3)        # choice slot i -> this button id
+        WHITE_CHOICES = (13, 12, 11, 10)    # mirror of the black side
+
+        # --- scoring (a team may legitimately sit negative) ---
+        SCORE_FIRST_RIGHT = 2         # buzz first and answer correctly
+        SCORE_FIRST_WRONG = -1        # buzz first and miss (discourages blind buzzing)
+        SCORE_STEAL_RIGHT = 1         # take the steal correctly (you had more info)
+        SCORE_STEAL_WRONG = 0         # whiff the steal (no extra penalty)
+
+        # --- source / voice selection ---
+        # FORCE_MODE: None auto-detects at start(); otherwise pin a (source, voice)
+        # pair, e.g. ("bank", "prebaked") or ("live", "piper"). The impossible
+        # combo ("live", "prebaked") is auto-corrected (you can't pre-bake an
+        # unknown live question).
+        FORCE_MODE = None
+        # CURATED_PLAYLIST: None = random-distinct sample of QUESTIONS_PER_MATCH.
+        # Otherwise an ordered list of bank question ids (str) or positional indices
+        # (int) -> a fixed "determined" match whose length becomes len(the list).
+        CURATED_PLAYLIST = None
+        FETCH_TIMEOUT_S = 3           # OpenTDB request timeout, seconds (live mode)
+        # Only relevant if/when a runtime TTS path exists; piper cannot run on the
+        # box's ARMv6 Pi Zero W, so PiperVoice is currently a stub.
+        PIPER_MODEL = "en_GB-alan-medium"
+
+        # --- asset paths ---
+        BANK_PATH = "assets/trivia/bank.json"  # question bank (JSON), repo-relative
+        EFFECT_DIR = "trivia"          # voice-over root under assets/sounds/effects
