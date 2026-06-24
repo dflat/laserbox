@@ -93,3 +93,27 @@ class config:
             4: ("BirthdayComposer", "birthday.wav"),
             5: ("SimonSays", "simon_says.wav"),
         }
+
+        # --- system power actions (last two physical buttons) ---
+        # These do NOT launch a program; they reboot/shut down the box. To guard
+        # against accidental triggering they use a three-press confirm flow (see
+        # GameSelect): 1st press announces, 2nd press arms (plays ``confirm``),
+        # 3rd press executes. Pressing any other button while armed cancels and
+        # returns to the menu. ``announce``/``confirm`` are wavs under
+        # assets/sounds/effects/menu/ ; ``action`` keys into SYSTEM_ACTIONS.
+        SYSTEM_MENU = {
+            12: dict(action="reboot",
+                     announce="reboot.wav", confirm="reboot_confirm.wav"),
+            13: dict(action="poweroff",
+                     announce="shutdown.wav", confirm="shutdown_confirm.wav"),
+        }
+
+        # action -> argv run (fire-and-forget) when a SYSTEM_MENU slot is
+        # confirmed. Verified on the box: the ``pi`` user has passwordless sudo
+        # and ``systemctl`` is on PATH (the /sbin/reboot|poweroff shims are not),
+        # so ``sudo systemctl <verb>`` is the robust invocation. systemd then
+        # SIGTERMs the service and game_loop's handler clears lasers/audio/GPIO.
+        SYSTEM_ACTIONS = {
+            "reboot": ["sudo", "systemctl", "reboot"],
+            "poweroff": ["sudo", "systemctl", "poweroff"],
+        }

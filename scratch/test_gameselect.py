@@ -97,11 +97,42 @@ def main():
     game.state_machine.program.quit()   # natural finish of a one-item context
     check("single-program finish -> GameSelect", prog() == "GameSelect")
 
-    # 7. unassigned button is a no-op
+    # 7. unassigned button is a no-op (buttons 6-11 are unassigned)
     step(0)
-    step(1 << 13)      # button 13 unassigned
+    step(1 << 6)
     check("unassigned button -> no arm", game.state_machine.program.armed is None)
     check("unassigned button -> still GameSelect", prog() == "GameSelect")
+
+    # 8. system slot (btn12 reboot): a different button cancels the pending action
+    ALL_LASERS = (1 << 14) - 1
+    game.state_machine.enter_game_select()
+    gs = game.state_machine.program
+    step(0)
+    step(1 << 12)      # first press -> announce + arm reboot
+    check("press btn12 -> armed 12", gs.armed == 12)
+    check("system arm lights only slot 12", game.lasers.to_word() == (1 << 12))
+    check("system arm not yet committed", gs.power_committed is False)
+    step(0)
+    step(1 << 0)       # any other button cancels and returns to menu
+    check("other button cancels power arm", gs.armed is None)
+    check("cancel did not arm the other button", gs.armed is None)
+    check("still GameSelect after cancel", prog() == "GameSelect")
+    check("not committed after cancel", gs.power_committed is False)
+
+    # 9. system slot (btn13 shutdown): three presses execute (simulated under -s)
+    step(0)
+    step(1 << 13)      # press 1 -> announce + arm
+    check("press1 btn13 -> armed 13", gs.armed == 13)
+    check("press1 not committed", gs.power_committed is False)
+    step(0)
+    step(1 << 13)      # press 2 -> confirm-arm (all lasers lit)
+    check("press2 still armed 13", gs.armed == 13)
+    check("press2 lights all lasers", game.lasers.to_word() == ALL_LASERS)
+    check("press2 not committed", gs.power_committed is False)
+    step(0)
+    step(1 << 13)      # press 3 -> execute (no real reboot: '-s' simulates)
+    check("press3 commits power action", gs.power_committed is True)
+    check("still GameSelect (simulated, no real shutdown)", prog() == "GameSelect")
 
     print()
     if all(passed):
