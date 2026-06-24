@@ -97,9 +97,9 @@ def main():
     game.state_machine.program.quit()   # natural finish of a one-item context
     check("single-program finish -> GameSelect", prog() == "GameSelect")
 
-    # 7. unassigned button is a no-op (buttons 6-11 are unassigned)
+    # 7. unassigned button is a no-op (buttons 7-11 are unassigned)
     step(0)
-    step(1 << 6)
+    step(1 << 8)
     check("unassigned button -> no arm", game.state_machine.program.armed is None)
     check("unassigned button -> still GameSelect", prog() == "GameSelect")
 
