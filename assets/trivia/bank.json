@@ -1,12 +1,16 @@
 {
-  "_note": "Starter offline trivia bank. Append-only / stable order so CURATED_PLAYLIST may reference positional indices. Each question's `id` names its audio folder under assets/sounds/effects/trivia/q/<id>/. choices are in frozen display order; correct_index points into them. Grow this with tools/trivia_sync.py.",
   "questions": [
     {
       "id": "geo-aus-capital",
       "category": "Geography",
       "difficulty": "easy",
       "question": "What is the capital city of Australia?",
-      "choices": ["Sydney", "Canberra", "Melbourne", "Perth"],
+      "choices": [
+        "Sydney",
+        "Canberra",
+        "Melbourne",
+        "Perth"
+      ],
       "correct_index": 1
     },
     {
@@ -14,7 +18,12 @@
       "category": "Science",
       "difficulty": "easy",
       "question": "Which planet is known as the Red Planet?",
-      "choices": ["Venus", "Jupiter", "Mars", "Saturn"],
+      "choices": [
+        "Venus",
+        "Jupiter",
+        "Mars",
+        "Saturn"
+      ],
       "correct_index": 2
     },
     {
@@ -22,7 +31,12 @@
       "category": "Science: Computers",
       "difficulty": "medium",
       "question": "What does the acronym CPU stand for?",
-      "choices": ["Central Process Unit", "Central Processing Unit", "Computer Personal Unit", "Central Processor Underflow"],
+      "choices": [
+        "Central Process Unit",
+        "Central Processing Unit",
+        "Computer Personal Unit",
+        "Central Processor Underflow"
+      ],
       "correct_index": 1
     },
     {
@@ -30,7 +44,12 @@
       "category": "Mathematics",
       "difficulty": "easy",
       "question": "How many sides does a hexagon have?",
-      "choices": ["Five", "Six", "Seven", "Eight"],
+      "choices": [
+        "Five",
+        "Six",
+        "Seven",
+        "Eight"
+      ],
       "correct_index": 1
     },
     {
@@ -38,7 +57,12 @@
       "category": "Literature",
       "difficulty": "easy",
       "question": "Who wrote the play Romeo and Juliet?",
-      "choices": ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
+      "choices": [
+        "Charles Dickens",
+        "William Shakespeare",
+        "Jane Austen",
+        "Mark Twain"
+      ],
       "correct_index": 1
     },
     {
@@ -46,7 +70,12 @@
       "category": "Science",
       "difficulty": "medium",
       "question": "What is the chemical symbol for gold?",
-      "choices": ["Gd", "Go", "Au", "Ag"],
+      "choices": [
+        "Gd",
+        "Go",
+        "Au",
+        "Ag"
+      ],
       "correct_index": 2
     },
     {
@@ -54,7 +83,12 @@
       "category": "History",
       "difficulty": "medium",
       "question": "In which year did the first human walk on the Moon?",
-      "choices": ["1965", "1969", "1972", "1958"],
+      "choices": [
+        "1965",
+        "1969",
+        "1972",
+        "1958"
+      ],
       "correct_index": 1
     },
     {
@@ -62,7 +96,12 @@
       "category": "Geography",
       "difficulty": "easy",
       "question": "What is the largest ocean on Earth?",
-      "choices": ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+      "choices": [
+        "Atlantic Ocean",
+        "Indian Ocean",
+        "Arctic Ocean",
+        "Pacific Ocean"
+      ],
       "correct_index": 3
     },
     {
@@ -70,7 +109,12 @@
       "category": "Science",
       "difficulty": "medium",
       "question": "Which gas do plants primarily absorb for photosynthesis?",
-      "choices": ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"],
+      "choices": [
+        "Oxygen",
+        "Nitrogen",
+        "Carbon Dioxide",
+        "Hydrogen"
+      ],
       "correct_index": 2
     },
     {
@@ -78,8 +122,534 @@
       "category": "Science",
       "difficulty": "medium",
       "question": "What is the hardest naturally occurring substance on Earth?",
-      "choices": ["Gold", "Iron", "Diamond", "Quartz"],
+      "choices": [
+        "Gold",
+        "Iron",
+        "Diamond",
+        "Quartz"
+      ],
       "correct_index": 2
+    },
+    {
+      "id": "bfbb47a6",
+      "category": "Entertainment: Video Games",
+      "difficulty": "medium",
+      "question": "In \"A Hat In Time\" who is the final boss?",
+      "choices": [
+        "Mustache Girl",
+        "Mafia Boss",
+        "Conductor",
+        "Snatcher"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "05f1b74b",
+      "category": "Science: Computers",
+      "difficulty": "easy",
+      "question": "If you were to code software in this language you'd only be able to type 0's and 1's.",
+      "choices": [
+        "JavaScript",
+        "C++",
+        "Python",
+        "Binary"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "5905b133",
+      "category": "Entertainment: Music",
+      "difficulty": "easy",
+      "question": "Which of these are NOT a Men at Work song?",
+      "choices": [
+        "Basket Case",
+        "Dr. Heckyll and Mr. Jive",
+        "Who Can It Be Now?",
+        "Be Good Johnny"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "c494ffac",
+      "category": "Entertainment: Comics",
+      "difficulty": "medium",
+      "question": "What is the name of the comic about a young boy, and a tiger who is actually a stuffed animal?",
+      "choices": [
+        "Calvin and Hobbes",
+        "Peanuts",
+        "Winnie the Pooh",
+        "Albert and Pogo"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "5aa71953",
+      "category": "General Knowledge",
+      "difficulty": "medium",
+      "question": "Which of these words means \"idle spectator\"?",
+      "choices": [
+        "Gossypiboma",
+        "Meupareunia",
+        "Jentacular",
+        "Gongoozler"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "abc38ccf",
+      "category": "Entertainment: Japanese Anime & Manga",
+      "difficulty": "easy",
+      "question": "What animation studio produced \"Gurren Lagann\"?",
+      "choices": [
+        "Kyoto Animation",
+        "Pierrot",
+        "A-1 Pictures",
+        "Gainax"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "50836e9a",
+      "category": "Entertainment: Music",
+      "difficulty": "medium",
+      "question": "When did Radiohead release their album \"OK Computer\"?",
+      "choices": [
+        "1997",
+        "2000",
+        "1993",
+        "1995"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "e0f27a63",
+      "category": "Entertainment: Video Games",
+      "difficulty": "easy",
+      "question": "Which character was introduced to the Super Smash Bros franchise in Super Smash Bros Melee?",
+      "choices": [
+        "Mega Man",
+        "Lucas",
+        "Samus",
+        "Sheik"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "f221d577",
+      "category": "Entertainment: Books",
+      "difficulty": "easy",
+      "question": "Which famous book is sub-titled 'The Modern Prometheus'?",
+      "choices": [
+        "Dracula",
+        "The Legend of Sleepy Hollow",
+        "Frankenstein",
+        "The Strange Case of Dr. Jekyll and Mr. Hyde "
+      ],
+      "correct_index": 2
+    },
+    {
+      "id": "1d78408c",
+      "category": "Entertainment: Video Games",
+      "difficulty": "medium",
+      "question": "Who is the main villain of Kirby's Return to Dreamland?",
+      "choices": [
+        "Landia",
+        "Queen Sectonia ",
+        "King Dedede",
+        "Magolor"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "fbd59a18",
+      "category": "Entertainment: Music",
+      "difficulty": "hard",
+      "question": "In the Panic! At the Disco's song \"Nothern Downpour\", which lyric follows 'I know the world's a broken bone'.",
+      "choices": [
+        "\"So sing your song until you're home\"",
+        "\"So let them know they're on their own\"",
+        "\"So start a fire in their cold stone\"",
+        "\"So melt your headaches call it home\""
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "53defe17",
+      "category": "Entertainment: Music",
+      "difficulty": "hard",
+      "question": "Who was the original drummer for The Beatles?",
+      "choices": [
+        "Stuart Sutcliffe",
+        "Pete Best",
+        "Ringo Starr",
+        "Tommy Moore"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "ca288f08",
+      "category": "History",
+      "difficulty": "medium",
+      "question": "Which of the following ancient Near Eastern peoples still exists as a modern ethnic group?",
+      "choices": [
+        "Babylonians",
+        "Assyrians",
+        "Hittites",
+        "Elamites"
+      ],
+      "correct_index": 1
+    },
+    {
+      "id": "cb1a4008",
+      "category": "Celebrities",
+      "difficulty": "medium",
+      "question": "Paul McCartney has always used his middle name. What is his real first name? ",
+      "choices": [
+        "Jack",
+        "John",
+        "Justin",
+        "James"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "226ec16a",
+      "category": "Entertainment: Film",
+      "difficulty": "hard",
+      "question": "What was the name of the planet in \"Aliens\"?",
+      "choices": [
+        "FR-838",
+        "DI-621",
+        "LV-426",
+        "Weyland Yutani Corporation Base"
+      ],
+      "correct_index": 2
+    },
+    {
+      "id": "706440c3",
+      "category": "Entertainment: Film",
+      "difficulty": "medium",
+      "question": "Darth Vader's famous reveal to Luke is iconic. But which of these is the right one?",
+      "choices": [
+        "\"No. I am your father.\"",
+        "\"Luke, I am your father.\"",
+        "\"You're wrong. I am your father.\"",
+        "\"The truth is that I am your father.\""
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "42c3c7dd",
+      "category": "General Knowledge",
+      "difficulty": "easy",
+      "question": "Which of these holidays is NOT usually celebrated in the month of December?",
+      "choices": [
+        "Hanukkah",
+        "Kwanzaa",
+        "Christmas",
+        "Thanksgiving"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "80ded8f5",
+      "category": "Entertainment: Video Games",
+      "difficulty": "hard",
+      "question": "In the game \"The Sims\", how many Simoleons does each family start with?",
+      "choices": [
+        "15,000",
+        "10,000",
+        "25,000",
+        "20,000"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "a59b1554",
+      "category": "History",
+      "difficulty": "medium",
+      "question": "What is the name of the famous Apache leader who died in 1909 at the age of 70?",
+      "choices": [
+        "Red Cloud",
+        "Crazy Horse",
+        "Geronimo",
+        "Sitting Bull"
+      ],
+      "correct_index": 2
+    },
+    {
+      "id": "bc4e1785",
+      "category": "Entertainment: Video Games",
+      "difficulty": "easy",
+      "question": "In what year was the first \"Mass Effect\" game released?",
+      "choices": [
+        "2008",
+        "2009",
+        "2007",
+        "2010"
+      ],
+      "correct_index": 2
+    },
+    {
+      "id": "cbc8dd12",
+      "category": "Entertainment: Video Games",
+      "difficulty": "medium",
+      "question": "In Dead by Daylight, which killer perk applies the mangled effect?",
+      "choices": [
+        "Sloppy Butcher",
+        "Thanatophobia",
+        "Enduring",
+        "Knock Out"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "9c48912f",
+      "category": "Science: Computers",
+      "difficulty": "medium",
+      "question": "In the programming language \"Python\", which of these statements would display the string \"Hello World\" correctly?",
+      "choices": [
+        "console.log(\"Hello World\")",
+        "print(\"Hello World\")",
+        "echo \"Hello World\"",
+        "printf(\"Hello World\")"
+      ],
+      "correct_index": 1
+    },
+    {
+      "id": "69f56855",
+      "category": "General Knowledge",
+      "difficulty": "easy",
+      "question": "How many letters are there in the English alphabet?",
+      "choices": [
+        "23",
+        "24",
+        "26",
+        "28"
+      ],
+      "correct_index": 2
+    },
+    {
+      "id": "2c3a8ca8",
+      "category": "Science: Computers",
+      "difficulty": "medium",
+      "question": "What does the term GPU stand for?",
+      "choices": [
+        "Graphical Proprietary Unit",
+        "Graphite Producing Unit",
+        "Gaming Processor Unit",
+        "Graphics Processing Unit"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "95bd4084",
+      "category": "Entertainment: Music",
+      "difficulty": "medium",
+      "question": "Which artist collaborated with American DJ Dillon Francis to release the song 2016 \"Need You\"?",
+      "choices": [
+        "KRNE",
+        "LOUDPVCK",
+        "DVBBS",
+        "NGHTMRE"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "07865fc1",
+      "category": "Entertainment: Video Games",
+      "difficulty": "easy",
+      "question": "Who is the leader of the Brotherhood of Nod in the Command and Conquer series?",
+      "choices": [
+        "Kane",
+        "CABAL",
+        "Yuri",
+        "Joseph Stalin"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "6f4b559d",
+      "category": "Entertainment: Film",
+      "difficulty": "medium",
+      "question": "Who voiced the character Draco in the 1996 movie 'DragonHeart'?",
+      "choices": [
+        "Pete Postlethwaite",
+        "Dennis Quaid",
+        "Brian Thompson",
+        "Sean Connery"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "bfe6f9c0",
+      "category": "Entertainment: Music",
+      "difficulty": "medium",
+      "question": "Which novelty band was best known for their UK chart hits \"Combine Harvester\" and \"I Am a Cider Drinker\" in 1976?",
+      "choices": [
+        "The Wurzels",
+        "Bonzo Dog Doo-Dah Band",
+        "The Firm",
+        "Goldie Lookin Chain"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "069ef2e5",
+      "category": "Entertainment: Film",
+      "difficulty": "medium",
+      "question": "What does TIE stand for in reference to the TIE Fighter in \"Star Wars\"?",
+      "choices": [
+        "Twin Intercepter Engine",
+        "Twin Ion Engine",
+        "Twin Inception Engine",
+        "Twin Iron Engine"
+      ],
+      "correct_index": 1
+    },
+    {
+      "id": "c64a36e5",
+      "category": "Entertainment: Comics",
+      "difficulty": "medium",
+      "question": "What is Homestuck character Gamzee's last name?",
+      "choices": [
+        "Makara",
+        "Makrea",
+        "Makare",
+        "Makera"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "01d54c5b",
+      "category": "General Knowledge",
+      "difficulty": "hard",
+      "question": "Which of the following chemicals are found in eggplant seeds?",
+      "choices": [
+        "Mescaline",
+        "Nicotine",
+        "Cyanide",
+        "Psilocybin"
+      ],
+      "correct_index": 1
+    },
+    {
+      "id": "04943122",
+      "category": "General Knowledge",
+      "difficulty": "easy",
+      "question": "If you are traveling at a speed of 80 mph, how long will it take you to drive 80 miles?",
+      "choices": [
+        "50 minutes",
+        "60 minutes",
+        "90 minutes",
+        "30 minutes"
+      ],
+      "correct_index": 1
+    },
+    {
+      "id": "f1f2f157",
+      "category": "Entertainment: Japanese Anime & Manga",
+      "difficulty": "hard",
+      "question": "Which animation studio produced the anime adaptation of \"xxxHolic\"?",
+      "choices": [
+        "Production I.G",
+        "Xebec",
+        "Kyoto Animation",
+        "Sunrise"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "83f05375",
+      "category": "Entertainment: Video Games",
+      "difficulty": "easy",
+      "question": "In the PAYDAY series, who betrayed the PAYDAY gang that got Hoxton arrested?",
+      "choices": [
+        "The Elephant",
+        "The Dentist",
+        "Vlad",
+        "Hector"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "0a3fa708",
+      "category": "General Knowledge",
+      "difficulty": "medium",
+      "question": "What name represents the letter \"M\" in the NATO phonetic alphabet?",
+      "choices": [
+        "Mark",
+        "Max",
+        "Matthew",
+        "Mike"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "2f6256df",
+      "category": "Geography",
+      "difficulty": "medium",
+      "question": "In which English county is Stonehenge?",
+      "choices": [
+        "Somerset",
+        "Herefordshire",
+        "Wiltshire",
+        "Cumbria"
+      ],
+      "correct_index": 2
+    },
+    {
+      "id": "f3e566a4",
+      "category": "Entertainment: Video Games",
+      "difficulty": "hard",
+      "question": "What programming language does the Source Engine use?",
+      "choices": [
+        "Java",
+        "Lua",
+        "C++ ",
+        "Python"
+      ],
+      "correct_index": 2
+    },
+    {
+      "id": "b80dcba2",
+      "category": "Entertainment: Video Games",
+      "difficulty": "easy",
+      "question": "In Undertale, what's the prize for answering correctly?",
+      "choices": [
+        "More questions",
+        "New car",
+        "Money",
+        "Mercy"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "7bbfd0cf",
+      "category": "General Knowledge",
+      "difficulty": "hard",
+      "question": "How many notes are there on a standard grand piano?",
+      "choices": [
+        "88",
+        "98",
+        "78",
+        "108"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "a893de6d",
+      "category": "Entertainment: Video Games",
+      "difficulty": "hard",
+      "question": "Which game in the \"Monster Hunter\" series introduced the \"Insect Glaive\" weapon?",
+      "choices": [
+        "Monster Hunter 2",
+        "Monster Hunter 4",
+        "Monster Hunter Stories",
+        "Monster Hunter Freedom"
+      ],
+      "correct_index": 1
     }
-  ]
+  ],
+  "_note": "Starter offline trivia bank. Append-only / stable order so CURATED_PLAYLIST may reference positional indices. Each question's `id` names its audio folder under assets/sounds/effects/trivia/q/<id>/. choices are in frozen display order; correct_index points into them. Grow this with tools/trivia_sync.py."
 }
