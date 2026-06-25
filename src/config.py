@@ -165,9 +165,13 @@ class config:
         CATEGORY = None               # None = any; else an OpenTDB category id (int)
 
         # --- timing (milliseconds) ---
-        ANSWER_TIMEOUT_MS = 30000     # lock-in deadline after a buzz (auto-picks an armed choice)
-        POST_QUESTION_BUZZ_MS = 30000  # buzz window after a question reads out untouched
-        WARNING_MS = 5000             # "five seconds remaining" warning before either deadline
+        # Choice-selection deadline after a buzz; set ONCE per turn and never reset
+        # by selecting/re-arming a choice. Gets the WARNING_MS warning.
+        ANSWER_TIMEOUT_MS = 15000
+        # Buzz window after the question + choices finish reading. Short and with
+        # NO warning (the window is the warning).
+        POST_QUESTION_BUZZ_MS = 5000
+        WARNING_MS = 5000             # "five seconds remaining" warning before the answer deadline
         VO_GAP_MS = 120               # gap inserted between chained voice-over clips
         READY_REPROMPT_MS = 12000     # re-announce "buzz to begin" if a team stalls
 

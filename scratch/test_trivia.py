@@ -246,6 +246,33 @@ def main():
     check("F: steal re-read is the question only (no choices, no intro)",
           voice.questions[-1] == ("f1", False, False))
 
+    # === Scenario G: the answer deadline is fixed, not reset by selecting ===
+    triv, voice = launch([Q("g1", 2)], match_length=1)   # correct slot 2
+    press(BLACK_BUZZ); press(WHITE_BUZZ)
+    press(BLACK_BUZZ)                          # black answering; deadline set once
+    d0 = triv.answer_deadline
+    press(BLACK[0])                            # arm a wrong slot
+    check("G: deadline not reset by arming a choice", triv.answer_deadline == d0)
+    press(BLACK[1])                            # re-arm a different wrong slot
+    check("G: deadline still not reset by re-arming", triv.answer_deadline == d0)
+
+    # === Scenario H: no warning in the buzz-in window; warning in answering ===
+    triv, voice = launch([Q("h1", 2)], match_length=1)
+    press(BLACK_BUZZ); press(WHITE_BUZZ)       # -> ASKING, buzz window open
+    check("H: buzz-in window is open", triv.phase is trivia_mod._Phase.ASKING
+          and triv.buzz_deadline is not None)
+    step(0); step(0)                           # tick inside the (short) buzz window
+    check("H: no five-second warning during the buzz-in window",
+          "five_seconds_remaining" not in voice.lines
+          and triv.phase is trivia_mod._Phase.ASKING)
+    press(BLACK_BUZZ)                          # black answering
+    triv._warned = False
+    triv.answer_deadline = triv.now_ms + (config.Trivia.WARNING_MS - 1)  # enter warning band
+    step(0)
+    check("H: warning DOES fire inside the answering window",
+          "five_seconds_remaining" in voice.lines
+          and triv.phase is trivia_mod._Phase.ANSWERING)
+
     print()
     if all(passed):
         print(f"ALL {len(passed)} CHECKS PASSED")
