@@ -259,6 +259,162 @@
         "Paul Revere"
       ],
       "correct_index": 3
+    },
+    {
+      "id": "714bb5d2",
+      "category": "Entertainment: Film",
+      "difficulty": "easy",
+      "question": "What was the first James Bond film?",
+      "choices": [
+        "Dr. No",
+        "Thunderball",
+        "From Russia With Love",
+        "Goldfinger"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "7c5e8d6c",
+      "category": "Entertainment: Film",
+      "difficulty": "easy",
+      "question": "Who directed the Kill Bill movies?",
+      "choices": [
+        "David Lean",
+        "Quentin Tarantino",
+        "Arnold Schwarzenegger",
+        "Stanley Kubrick"
+      ],
+      "correct_index": 1
+    },
+    {
+      "id": "bf063893",
+      "category": "Entertainment: Film",
+      "difficulty": "easy",
+      "question": "In the movie \"Blade Runner\", what is the term used for human-like androids ?",
+      "choices": [
+        "Synthetics",
+        "Replicants",
+        "Cylons",
+        "Skinjobs"
+      ],
+      "correct_index": 1
+    },
+    {
+      "id": "b58c9493",
+      "category": "Entertainment: Film",
+      "difficulty": "easy",
+      "question": "Where does the original Friday The 13th movie take place?",
+      "choices": [
+        "Packanack",
+        "Higgins Haven",
+        "Camp Forest Green",
+        "Camp Crystal Lake"
+      ],
+      "correct_index": 3
+    },
+    {
+      "id": "eefddfbd",
+      "category": "Entertainment: Film",
+      "difficulty": "medium",
+      "question": "Which star actor was in \"Top Gun\", \"Jerry Maguire\" and \"Born on the Fourth of July\"?",
+      "choices": [
+        "Kelly McGillis",
+        "John Travolta",
+        "Tom Cruise",
+        "George Clooney"
+      ],
+      "correct_index": 2
+    },
+    {
+      "id": "91c22788",
+      "category": "Entertainment: Film",
+      "difficulty": "easy",
+      "question": "Which of these Movies was NOT released in 1996?",
+      "choices": [
+        "Gladiator",
+        "The Rock",
+        "Mission: Impossible",
+        "Independence Day"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "64482d8e",
+      "category": "Entertainment: Film",
+      "difficulty": "easy",
+      "question": "In \"ALF\", what was ALF's real name?",
+      "choices": [
+        "Gordon Foster",
+        "Gordon Shumway",
+        "Gordon von Gam",
+        "Gordon Milipp"
+      ],
+      "correct_index": 1
+    },
+    {
+      "id": "48e44118",
+      "category": "General Knowledge",
+      "difficulty": "easy",
+      "question": "Foie gras is a French delicacy typically made from what part of a duck or goose?",
+      "choices": [
+        "Intestines",
+        "Heart",
+        "Liver",
+        "Stomach"
+      ],
+      "correct_index": 2
+    },
+    {
+      "id": "e259f7a5",
+      "category": "General Knowledge",
+      "difficulty": "medium",
+      "question": "What Latin phrase roughly translates to \"seize the day\"?",
+      "choices": [
+        "Sic semper tyrannis",
+        "Carpe diem",
+        "Plus ultra",
+        "Memento mori"
+      ],
+      "correct_index": 1
+    },
+    {
+      "id": "d074d0db",
+      "category": "General Knowledge",
+      "difficulty": "medium",
+      "question": "Astraphobia is the irrational fear of what?",
+      "choices": [
+        "Thunder",
+        "Wind",
+        "Rain",
+        "Snow"
+      ],
+      "correct_index": 0
+    },
+    {
+      "id": "cf9c093c",
+      "category": "General Knowledge",
+      "difficulty": "easy",
+      "question": "What is the largest living species of penguin?",
+      "choices": [
+        "Gentoo",
+        "Emperor",
+        "Adele",
+        "King"
+      ],
+      "correct_index": 1
+    },
+    {
+      "id": "d74029a3",
+      "category": "General Knowledge",
+      "difficulty": "medium",
+      "question": "What is the last letter of the Greek alphabet?",
+      "choices": [
+        "Kappa",
+        "Omega",
+        "Mu",
+        "Epsilon"
+      ],
+      "correct_index": 1
     }
   ],
   "_note": "Starter offline trivia bank. Append-only / stable order so CURATED_PLAYLIST may reference positional indices. Each question's `id` names its audio folder under assets/sounds/effects/trivia/q/<id>/. choices are in frozen display order; correct_index points into them. Grow this with tools/trivia_sync.py."
