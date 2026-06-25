@@ -5,8 +5,9 @@ concrete sources implement the same small contract so the game never knows which
 is wired in:
 
 * :class:`BankSource` -- reads a local JSON bank (``assets/trivia/bank.json``).
-  Either samples ``count`` distinct questions at random, or, given a
-  ``playlist``, plays an exact curated list in order.
+  Samples ``count`` distinct questions at random; a ``whitelist`` first narrows
+  the pool to a named subset of the bank, while a ``playlist`` instead plays an
+  exact curated list in order (playlist wins if both are given).
 * :class:`OpenTDBSource` -- fetches a batch from the Open Trivia DB over HTTP.
 
 Everything is decided up front in :meth:`QuestionSource.prepare` (one batch
@@ -38,6 +39,37 @@ class SourceUnavailable(Exception):
 
     The caller treats this as "try the next source" (e.g. live -> bank).
     """
+
+
+def load_whitelist(name: str, whitelist_dir: str | None = None) -> list[str]:
+    """Load a named bank-subset whitelist and return its question ids.
+
+    A whitelist is a small JSON file (built by ``tools/trivia_whitelist.py``)
+    under :data:`config.Trivia.WHITELIST_DIR` that narrows which bank questions a
+    match may draw from. Accepts either a ``{"ids": [...]}`` object (the format the
+    tool writes) or a bare JSON list of ids.
+
+    Args:
+        name: Whitelist file name without the ``.json`` extension.
+        whitelist_dir: Repo-relative directory to look in (defaults to
+            :data:`config.Trivia.WHITELIST_DIR`).
+
+    Returns:
+        The list of bank question ids in the whitelist.
+
+    Raises:
+        SourceUnavailable: If the file is missing or has no usable ids.
+    """
+    wdir = whitelist_dir or config.Trivia.WHITELIST_DIR
+    path = os.path.join(config.PROJECT_ROOT, wdir, f"{name}.json")
+    if not os.path.exists(path):
+        raise SourceUnavailable(f"whitelist not found: {path}")
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+    ids = data.get("ids") if isinstance(data, dict) else data
+    if not ids:
+        raise SourceUnavailable(f"whitelist {name!r} contains no ids")
+    return list(ids)
 
 
 @dataclass(frozen=True)
@@ -156,23 +188,30 @@ class QuestionSource(abc.ABC):
 class BankSource(QuestionSource):
     """Reads questions from the local JSON bank.
 
-    Without a playlist: shuffles the whole bank and pulls ``count`` for the match
-    (extras stay available for sudden-death). With a playlist: plays exactly those
-    questions in order, then any leftover bank questions (shuffled) back the
-    sudden-death rounds.
+    Default: shuffles the whole bank and pulls ``count`` for the match (extras stay
+    available for sudden-death). With a ``whitelist``: the same random draw, but
+    restricted first to the whitelisted subset of bank questions. With a
+    ``playlist``: plays exactly those questions in order, then any leftover bank
+    questions (shuffled) back the sudden-death rounds. A playlist takes precedence
+    over a whitelist if both are supplied.
 
     Args:
         count: Desired match length (ignored when a playlist is given).
         bank_path: Repo-relative path to the bank JSON.
         playlist: Optional ordered list of question ids (str) or bank indices
             (int) for a curated "determined" match.
+        whitelist: Optional bank-subset filter -- either a whitelist *name* (str,
+            resolved against :data:`config.Trivia.WHITELIST_DIR`) or an explicit
+            iterable of question ids. The match still randomly samples ``count``
+            distinct questions, only from this subset.
         rng: Random source (injectable for deterministic tests).
     """
 
-    def __init__(self, count, bank_path=None, playlist=None, rng=None):
+    def __init__(self, count, bank_path=None, playlist=None, whitelist=None, rng=None):
         super().__init__(count)
         self.bank_path = bank_path or config.Trivia.BANK_PATH
         self.playlist = playlist
+        self.whitelist = whitelist
         self.rng = rng or random
 
     def prepare(self) -> None:
@@ -189,9 +228,23 @@ class BankSource(QuestionSource):
             self.match_length = len(chosen)
             self._remaining = deque(chosen + extra)
         else:
+            questions = self._apply_whitelist(questions)
             self.rng.shuffle(questions)
             self.match_length = min(self.count, len(questions))
             self._remaining = deque(questions)
+
+    def _apply_whitelist(self, questions: list[Question]) -> list[Question]:
+        """Narrow ``questions`` to the configured whitelist (no-op if unset)."""
+        if not self.whitelist:
+            return questions
+        ids = (load_whitelist(self.whitelist) if isinstance(self.whitelist, str)
+               else list(self.whitelist))
+        allowed = set(ids)
+        filtered = [q for q in questions if q.id in allowed]
+        if not filtered:
+            raise SourceUnavailable(
+                f"whitelist {self.whitelist!r} matched zero bank questions")
+        return filtered
 
     def _bank_abspath(self) -> str:
         # mirrors Mixer's PROJECT_ROOT-relative convention so cwd is the repo dir

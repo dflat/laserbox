@@ -193,6 +193,14 @@ class config:
         # Otherwise an ordered list of bank question ids (str) or positional indices
         # (int) -> a fixed "determined" match whose length becomes len(the list).
         CURATED_PLAYLIST = None
+        # WHITELIST: None = draw from the whole bank. Otherwise the name (no
+        # extension) of a whitelist file under WHITELIST_DIR; the match still
+        # randomly samples QUESTIONS_PER_MATCH distinct questions, but only from
+        # that whitelisted subset of the bank. Unlike CURATED_PLAYLIST (a fixed,
+        # ordered, predetermined match), a whitelist only narrows the random pool.
+        # CURATED_PLAYLIST takes precedence if both are set. Build whitelists with
+        # ``tools/trivia_whitelist.py``.
+        WHITELIST = None
         FETCH_TIMEOUT_S = 3           # OpenTDB request timeout, seconds (live mode)
         # Only relevant if/when a runtime TTS path exists; piper cannot run on the
         # box's ARMv6 Pi Zero W, so PiperVoice is currently a stub.
@@ -200,4 +208,5 @@ class config:
 
         # --- asset paths ---
         BANK_PATH = "assets/trivia/bank.json"  # question bank (JSON), repo-relative
+        WHITELIST_DIR = "assets/trivia/whitelists"  # named bank-subset whitelists
         EFFECT_DIR = "trivia"          # voice-over root under assets/sounds/effects

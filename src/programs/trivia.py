@@ -137,7 +137,8 @@ class Trivia(Program):
             print(f"[Trivia] {type(source).__name__} unavailable ({e}); "
                   "falling back to bank")
         source = BankSource(self.cfg.QUESTIONS_PER_MATCH,
-                            playlist=self.cfg.CURATED_PLAYLIST)
+                            playlist=self.cfg.CURATED_PLAYLIST,
+                            whitelist=self.cfg.WHITELIST)
         voice = PrebakedVoice(self.game.mixer, self.after)
         try:
             source.prepare()

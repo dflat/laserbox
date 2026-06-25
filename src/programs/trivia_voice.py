@@ -313,7 +313,8 @@ def _make_source(kind, rng=None):
                              difficulty=config.Trivia.DIFFICULTY,
                              category=config.Trivia.CATEGORY, rng=rng)
     return BankSource(config.Trivia.QUESTIONS_PER_MATCH,
-                      playlist=config.Trivia.CURATED_PLAYLIST, rng=rng)
+                      playlist=config.Trivia.CURATED_PLAYLIST,
+                      whitelist=config.Trivia.WHITELIST, rng=rng)
 
 
 def _make_voice(kind, mixer, schedule):
