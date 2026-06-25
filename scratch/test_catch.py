@@ -1,8 +1,9 @@
 """Headless logic smoke test for the Catch mini-game.
 
 Drives a real Game with a scripted input register (no display/keyboard) and
-asserts the intro, the READY -> auto-start -> CHASE flow, catch-to-climb a level,
-miss-back-to-level-1, the final-level win -> menu, and the blip bounce. Scheduled
+asserts the intro, a press-to-skip-intro, the READY -> auto-start -> CHASE flow,
+any-button catch-to-climb a level, miss-back-to-level-1 (with no repeated level-1
+cue), the final-level win -> menu, and the blip bounce. Scheduled
 ``after()`` transitions run on wall-clock time, so where a test needs the far
 side of one it calls the transition method directly. Run from repo root:
 
@@ -93,15 +94,16 @@ def main():
     step(0)
     check("READY target blink goes dark", game.lasers.to_word() == 0)
 
-    # 3. presses during the intro are ignored -- the game starts on its own
-    step(1 << target)
-    check("target press during READY is ignored", prog().state == "READY")
-    step(0)
-    step(1 << 5)
-    check("other press during READY is ignored", prog().state == "READY")
-    step(0)
+    # 3. a press during the intro skips it and starts level 1 right away
+    played.clear()
+    step(1 << 5)  # any button skips the rest of the narration
+    check("press during READY skips intro -> PAUSE", prog().state == "PAUSE")
+    check("skip announces level 1", played and played[-1] == cfg.LEVEL_SOUNDS[0])
+    check("skip starts at level index 0", prog().level_index == 0)
 
-    # 4. when the intro finishes, level 1 starts automatically (no press)
+    # 4. without a skip, level 1 starts on its own when the intro finishes
+    game.state_machine.launch_single_program("Catch")  # fresh READY
+    check("re-launch back to READY", prog().state == "READY")
     played.clear()
     prog()._enter_level(0)  # far side of the scheduled intro -> level 1
     check("auto-start -> PAUSE (level cue)", prog().state == "PAUSE")
@@ -134,15 +136,19 @@ def main():
     step(0)
     check("miss-hold: target blinks off, missed blip stays solid",
           game.lasers.to_word() == (1 << (target + 2)))
+    played.clear()
     prog()._rearm()  # far side of the scheduled reset
     check("miss auto-restarts level 1 (PAUSE cue)", prog().state == "PAUSE")
     check("miss resets to level 0", prog().level_index == 0)
-    check("level-1 re-announced on restart", played[-1] == cfg.LEVEL_SOUNDS[0])
+    check("level-1 cue NOT replayed on restart (miss line already said it)",
+          cfg.LEVEL_SOUNDS[0] not in played)
 
-    # 6b. MISS: the wrong button is always a miss, even on a winning blip
+    # 6b. any button (not just the target's own) catches on a winning blip
     arm_chase(blip=target, level=1)
     step(1 << 7)
-    check("wrong button -> miss sound", played[-1] == cfg.MISS_SOUND)
+    check("wrong button still catches when blip is on target",
+          played[-1] == cfg.LEVEL_SOUNDS[2])
+    check("any-button catch climbs a level", prog().level_index == 2)
 
     # 7. blip bounces at both ends and keeps going (no auto-stop)
     p = prog()

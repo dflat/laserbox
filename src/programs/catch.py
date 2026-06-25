@@ -5,20 +5,21 @@ The whole game revolves around a single fixed port, ``config.Catch.TARGET``
 
 * **READY** -- a short spoken intro explains the rules while only the target
   laser blinks (at ``config.Catch.BLINK_HZ``, twice a second). Level 1 then
-  starts on its own when the intro finishes -- there is no press-to-begin.
+  starts on its own when the intro finishes; pressing any button skips the rest
+  of the intro and starts level 1 immediately.
 * **CHASE** -- a single laser "blip" spawns at port 0 and bounces back and forth
   across every port (``0 -> 13 -> 0``) at the current level's speed. It keeps
   bouncing **forever** until the player presses. The target keeps blinking so the
   goal stays visible while the blip races past it.
 
-Pressing the **target** button during the chase resolves the round by where the
-blip is at that instant:
+Pressing **any** button during the chase stops the blip and resolves the round
+by where it is at that instant:
 
-* **Catch** -- blip exactly on the target. The player climbs to the next, faster
-  level (announced by voice). Catching on the final level wins the whole game
-  with a Golf-style celebration, then returns to the menu.
-* **Miss** -- blip anywhere else, *or* any non-target button pressed. A failure
-  line plays and the player drops back to level 1.
+* **Catch** -- blip on the target. The player climbs to the next, faster level
+  (announced by voice). Catching on the final level wins the whole game with a
+  Golf-style celebration, then returns to the menu.
+* **Miss** -- blip anywhere else. A failure line plays and the player drops back
+  to level 1.
 
 Speed escalates **per success across the session**, not within one chase: each
 level in ``config.Catch.LEVEL_STEP_MS`` is faster than the last. Reachable from
@@ -34,7 +35,7 @@ class Catch(Program):
     """Climb three increasingly fast levels by catching the bouncing blip."""
 
     # Phase names (also referenced by the headless test).
-    READY = "READY"          # intro / target preview; auto-advances, ignores input
+    READY = "READY"          # intro / target preview; auto-advances or skip w/ a press
     CHASE = "CHASE"
     PAUSE = "PAUSE"          # frozen between levels / during the win dance
     MISS_HOLD = "MISS_HOLD"  # showing where the player missed before the reset
@@ -78,14 +79,21 @@ class Catch(Program):
         self.state = self.READY
         self._clock_ms = 0.0  # restart the blink so it begins on a lit flash
         self.game.lasers.set_word(0)
-        self.after(delay_ms, self._enter_level, 0)  # auto-start: no press-to-begin
+        # Auto-start level 1 when the intro finishes; a press skips to it sooner.
+        self.after(delay_ms, self._enter_level, 0)
 
-    def _enter_level(self, level_index):
-        """Announce ``level_index`` (the level-up = "nice catch" cue), hold, chase."""
+    def _enter_level(self, level_index, announce=True):
+        """Optionally announce ``level_index`` (the level-up = "nice catch" cue), hold, chase.
+
+        ``announce`` is suppressed when re-arming at level 1 after a miss: the
+        failure line already says we are back at level 1, so replaying the
+        "level 1, here we go" cue every reset would be redundant.
+        """
         self.level_index = level_index
         self.state = self.PAUSE
         self.game.lasers.set_word(1 << self.target)  # hold target lit during the cue
-        self.game.mixer.play_effect(self.level_sounds[level_index])
+        if announce:
+            self.game.mixer.play_effect(self.level_sounds[level_index])
         self.after(self.level_advance_ms, self._start_chase)
 
     def _start_chase(self):
@@ -113,8 +121,12 @@ class Catch(Program):
         self.after(self.miss_reset_ms, self._rearm)
 
     def _rearm(self):
-        """Auto-restart at level 1 after the miss hold (no press to continue)."""
-        self._enter_level(0)
+        """Auto-restart at level 1 after the miss hold (no press to continue).
+
+        Stays silent: the miss line already announced the drop back to level 1,
+        so the "level 1, here we go" cue is only spoken once, at the very start.
+        """
+        self._enter_level(0, announce=False)
 
     def _win(self):
         """Won the final level: do what Golf does -- congrats + dance, then menu."""
@@ -162,13 +174,27 @@ class Catch(Program):
 
     # -- input --------------------------------------------------------------
     def _on_button_down(self, button_id):
-        """Resolve a press during the chase; input is ignored in every other phase."""
+        """Resolve a press: skip the intro in READY, judge the blip in CHASE.
+
+        Any button counts -- the player just has to stop the blip on the target,
+        not hit the target's own button -- so a press is a catch whenever the
+        blip is on the target and a miss anywhere else. Presses in the between-
+        level pauses are ignored.
+        """
+        if self.state == self.READY:
+            return self._skip_intro()
         if self.state != self.CHASE:
             return
-        if button_id == self.target and self.blip == self.target:
+        if self.blip == self.target:
             self._catch()
         else:
             self._miss()
+
+    def _skip_intro(self):
+        """A press during the intro: cut the narration short and start level 1 now."""
+        self.scheduler = []  # drop the pending intro -> level-1 transition
+        self.game.mixer.effects[self.intro_sound].stop()
+        self._enter_level(0)
 
     # -- rendering ----------------------------------------------------------
     def _blink_on(self):
