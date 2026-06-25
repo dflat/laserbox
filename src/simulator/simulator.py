@@ -212,10 +212,10 @@ class Simulator(Game):
 
     def run(self):
         """Run the simulator main loop."""
-        self.dt = 1/self.FPS
+        self.dt = 1000/self.FPS  # ms, matching GameClock.tick()'s units
         print('hiell')
         while True:
           self.update(self.dt)
           self.render()
-          self.dt = self.clock.tick(self.FPS)
+          self.dt = self.clock.tick()
           dts.append(self.dt)

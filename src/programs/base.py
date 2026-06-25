@@ -19,8 +19,8 @@ guide for the full walkthrough.
 
 __all__ = ['State', 'StateSequence', 'StateMachine', 'Program']
 
-import time
 from heapq import heappush, heappop
+from .. import clock
 from ..config import config
 from ..animation import hold_pattern, Animation
 from ..event_loop import events
@@ -494,14 +494,29 @@ class Program:
         StateMachine.register_program(self)
         self._tick = 0
         # per-instance scheduler/cooldowns (must NOT be shared across programs)
-        self.scheduler = []   # heap of (deadline, schedule_id, fn)
-        self.cooldowns = {}   # button_id -> deadline_tick
+        self.scheduler = []   # heap of (deadline_ms, schedule_id, fn)
+        self.cooldowns = {}   # button_id -> deadline_ms
         self.schedule_id = 0
 
     @property
     def tick(self):
-      """Frame counter for this program. Read-only; increments once per frame."""
+      """Frame counter for this program. Read-only; increments once per frame.
+
+      A pure frame index for frame-based bookkeeping -- **not** a clock. Anything
+      that needs a real duration (timeouts, cooldowns, scheduled callbacks) must
+      use :attr:`now_ms`, which is robust to frame-rate variation.
+      """
       return self._tick
+
+    @property
+    def now_ms(self):
+      """Monotonic game-loop time in ms (see :attr:`Game.now_ms`).
+
+      The single timeline for every deadline this program sets or checks. It only
+      moves forward and is immune to wall-clock jumps, so durations measured
+      against it are always correct.
+      """
+      return self.game.now_ms
 
     def update(self, dt):
         """Per-frame update. **Override in subclass** (and call ``super()``).
@@ -565,7 +580,7 @@ class Program:
             *args: Positional args for ``func``.
             **kwargs: Keyword args for ``func``.
         """
-        deadline = time.time() + ms/1000
+        deadline = self.now_ms + ms
         f = lambda: func(*args, **kwargs)
         heappush(self.scheduler, (deadline, self.schedule_id, f))
         self.schedule_id += 1
@@ -573,7 +588,7 @@ class Program:
     def check_schedule(self):
         """Run any scheduled callbacks whose deadline has passed."""
         if self.scheduler:
-            now = time.time()
+            now = self.now_ms
             while self.scheduler:
                 nearest_deadline, sched_id, func = heappop(self.scheduler)
                 if now - nearest_deadline > 0:
@@ -591,15 +606,13 @@ class Program:
         Use with ``if button_id not in self.cooldowns`` to debounce/rate-limit
         actions on held or bouncing buttons.
         """
-        cooldown_ticks = int(config.FPS*ms/1000) # quarter-second cooldown after button press is default
-        deadline_tick = cooldown_ticks + self.tick
-        self.cooldowns[button_id] = deadline_tick
+        self.cooldowns[button_id] = self.now_ms + ms  # default: quarter-second
 
     def check_cooldowns(self):
-        """Expire any cooldowns whose deadline tick has passed."""
+        """Expire any cooldowns whose deadline has passed."""
         to_free = []
-        for button_id, deadline_tick in self.cooldowns.items():
-            if self.tick - deadline_tick > 0:
+        for button_id, deadline_ms in self.cooldowns.items():
+            if self.now_ms - deadline_ms > 0:
                 to_free.append(button_id)
         for button_id in to_free:
             self.cooldowns.pop(button_id)

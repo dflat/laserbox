@@ -12,7 +12,6 @@ from ..config import config
 from ..animation import random_k_dance
 import random
 import os
-import time
 import math
 import inspect
 import pygame
@@ -47,13 +46,13 @@ class Golf(Program):
             )]
 
     def init_blink_duty_cycle(self):
-        """Precompute the on/off tick counts for blinking the target hole."""
+        """Precompute the on/off durations (ms) for blinking the target hole."""
         self.blink_fps = 3                  # frequency of "target hole" laser blinks
         self.blink_duty_cycle = .5         # percent of cycle to keep laser ON
-        self.blink_cycle_ticks = config.FPS/self.blink_fps              # ticks in one duty cycle
-        blink_on_ticks = int(self.blink_duty_cycle*self.blink_cycle_ticks)   # percent of duty cycle ON
-        blink_off_ticks = int((1 - self.blink_duty_cycle)*self.blink_cycle_ticks) # percent of duty OFF
-        self.ticks_to_wait = [blink_off_ticks, blink_on_ticks]         # indexed by toggle flag
+        blink_period_ms = 1000 / self.blink_fps                        # one duty cycle, ms
+        blink_on_ms = self.blink_duty_cycle * blink_period_ms          # ON portion, ms
+        blink_off_ms = (1 - self.blink_duty_cycle) * blink_period_ms   # OFF portion, ms
+        self.blink_ms_to_wait = [blink_off_ms, blink_on_ms]            # indexed by blink_on flag
 
     def start(self):
         """Load audio/animation assets, init round state, and deal the first goal."""
@@ -95,10 +94,10 @@ class Golf(Program):
 
     def update_blink_animation(self):
         """Toggle the blinking target hole at the configured duty cycle."""
-        elapsed_ticks = self.tick - self.last_blink_toggle
-        if elapsed_ticks >= self.ticks_to_wait[self.blink_on]:
+        elapsed = self.program_t - self.last_blink_toggle
+        if elapsed >= self.blink_ms_to_wait[self.blink_on]:
             self.blink_on = not self.blink_on
-            self.last_blink_toggle = self.tick
+            self.last_blink_toggle = self.program_t
             #if not (self.swinging or self.rolling):
             #    self.set_word(0)
             self.refresh_word() # blink even if no one is calling set_word (e.g. in waiting state)
@@ -127,7 +126,7 @@ class Golf(Program):
         """Begin charging the swing (records the start time)."""
         #print(inspect.stack()[0][3])
         self.swinging = True
-        self.swing_start = time.time()
+        self.swing_start = self.now_ms
 
     def stop_swinging(self):
         """End charging; freeze the final power and the resting displacement."""
@@ -146,7 +145,7 @@ class Golf(Program):
             return
         #print(inspect.stack()[0][3])
         self.rolling = True
-        self.roll_start = time.time()
+        self.roll_start = self.now_ms
 
     def stop_rolling(self):
         """End the rolling phase."""
@@ -224,7 +223,7 @@ class Golf(Program):
 
     def roll(self):
         """Advance the rolling ball one frame: light its port, sound it, or stop."""
-        roll_time = time.time() - self.roll_start
+        roll_time = (self.now_ms - self.roll_start) / 1000  # seconds
         displacement_index = self.get_displacement_index(roll_time)
         if displacement_index is None:
             # ball has rolled off the edge.
@@ -269,7 +268,7 @@ class Golf(Program):
         """
         to_release = []
         for key, deadline in self.release_pending.items():
-            if self.tick - deadline > 0:
+            if self.now_ms - deadline > 0:
                 # deadline has passed, trigger action
                 to_release.append(key)
                 self.stop_swinging()
@@ -286,7 +285,7 @@ class Golf(Program):
         self.program_t += dt
 
         if self.swinging:
-            self.get_velocity(time.time() - self.swing_start)
+            self.get_velocity((self.now_ms - self.swing_start) / 1000)  # seconds
             self.set_word(sum(2**i for i in self.remap[:self.power_index]))
 
         elif self.rolling:
@@ -310,8 +309,8 @@ class Golf(Program):
                     if self.release_pending:
                         continue
                     else:
-                        self.release_pending[event.key] = (self.tick +
-                                                        int(config.FPS*config.ANTI_JITTER_DELAY))
+                        self.release_pending[event.key] = (
+                            self.now_ms + config.ANTI_JITTER_DELAY * 1000)
 
             elif isinstance(event, ToggleEvent):
                 toggle_state = self.game.input_manager.state.toggles

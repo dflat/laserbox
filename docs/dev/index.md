@@ -47,6 +47,7 @@ and tap `e` twice. See {doc}`simulator`.
   `Program` lifecycle.
 - {doc}`authoring-programs` — **the guide to writing your own game.**
 - {doc}`animation` and {doc}`audio` — the laser-animation and sound subsystems.
+- {doc}`time` — the monotonic timing model: how to measure durations safely.
 - {doc}`simulator` and {doc}`hardware` — dev workflow and wiring.
 - {doc}`api/index` — the auto-generated API reference.
 
@@ -60,6 +61,7 @@ state-machine
 authoring-programs
 animation
 audio
+time
 simulator
 hardware
 ```

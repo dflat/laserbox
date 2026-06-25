@@ -48,11 +48,10 @@ class GameSelect(Program):
     def start(self):
         self._ensure_standard_mixer()
         self.armed = None         # button_id currently armed, or None
-        self.arm_deadline = None  # tick at which the arm expires
+        self.arm_deadline = None  # now_ms at which the arm expires
         self.press_count = 0      # presses on the armed slot so far
         self.power_committed = False  # a reboot/shutdown has been issued
-        self.arm_timeout_ticks = int(
-            config.FPS * config.GameSelect.ARM_TIMEOUT_MS / 1000)
+        self.arm_timeout_ms = config.GameSelect.ARM_TIMEOUT_MS
         self.game.lasers.set_word(0)
         self._load_effects()
         self._play(self.choose_sound)
@@ -111,7 +110,7 @@ class GameSelect(Program):
         """First press of a slot: announce it and light its laser."""
         self.armed = button_id
         self.press_count = 1
-        self.arm_deadline = self.tick + self.arm_timeout_ticks
+        self.arm_deadline = self.now_ms + self.arm_timeout_ms
         self.game.lasers.set_word(1 << button_id)  # light the armed slot
         self._play(self._effect_path(self._announce_file(button_id)))
 
@@ -128,7 +127,7 @@ class GameSelect(Program):
         the second arms them (all lasers + confirm prompt), the third executes.
         """
         self.press_count += 1
-        self.arm_deadline = self.tick + self.arm_timeout_ticks  # keep alive
+        self.arm_deadline = self.now_ms + self.arm_timeout_ms  # keep alive
 
         if button_id not in self.system_menu:
             self._launch(button_id)            # game slot: second press launches
@@ -169,7 +168,7 @@ class GameSelect(Program):
             return  # committed to reboot/shutdown; ignore input until we're stopped
 
         # expire a stale armed selection
-        if self.armed is not None and self.tick > self.arm_deadline:
+        if self.armed is not None and self.now_ms > self.arm_deadline:
             self._disarm()
 
         for event in events.get():

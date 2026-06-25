@@ -178,7 +178,7 @@ def main():
     triv, voice = launch([Q("s1", 0), Q("s2", 3)], match_length=1)
     press(BLACK_BUZZ); press(WHITE_BUZZ)   # ready -> question 1
     check("B: at question 1", triv.q_number == 1 and triv.phase is trivia_mod._Phase.ASKING)
-    triv.buzz_deadline = triv.tick - 1     # force the no-buzz window to expire
+    triv.buzz_deadline = triv.now_ms - 1     # force the no-buzz window to expire
     step(0)
     check("B: tie 0-0 after regulation goes to sudden death (q2)",
           triv.q_number == 2 and triv.phase is trivia_mod._Phase.ASKING)
@@ -193,7 +193,7 @@ def main():
     press(BLACK_BUZZ); press(WHITE_BUZZ)
     press(WHITE_BUZZ)                      # white buzzes first
     check("C: white answering", triv.current_team == "white")
-    triv.answer_deadline = triv.tick - 1  # force the lock-in deadline to expire
+    triv.answer_deadline = triv.now_ms - 1  # force the lock-in deadline to expire
     n0 = voice.interrupts
     step(0)
     check("C: answer timeout interrupts VO", voice.interrupts == n0 + 1)
@@ -208,7 +208,7 @@ def main():
     press(BLACK[2])                         # ARM the correct slot (2), do NOT confirm
     check("D: choice armed, not locked", triv.armed_slot == 2
           and triv.phase is trivia_mod._Phase.ANSWERING)
-    triv.answer_deadline = triv.tick - 1    # force the lock-in deadline to expire
+    triv.answer_deadline = triv.now_ms - 1    # force the lock-in deadline to expire
     step(0)
     check("D: timeout auto-locks the armed (correct) choice -> +2",
           triv.score["black"] == 2)
@@ -221,7 +221,7 @@ def main():
     triv, voice = launch([Q("e1", 0)], match_length=1)
     press(BLACK_BUZZ); press(WHITE_BUZZ)
     press(BLACK_BUZZ)                          # black buzzes, then never arms a choice
-    triv.answer_deadline = triv.tick - 1       # time out with NO choice armed
+    triv.answer_deadline = triv.now_ms - 1       # time out with NO choice armed
     step(0)
     check("E: steal handed to white", triv.current_team == "white"
           and triv.current_stakes == "steal")

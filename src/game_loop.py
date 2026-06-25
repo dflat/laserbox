@@ -8,10 +8,9 @@ single 16-bit word each frame). On the desktop this class is subclassed by
 :class:`~src.simulator.simulator.Simulator`.
 """
 import sys
-import time
 import signal
-from collections import deque, namedtuple
 import pygame
+from . import clock
 from .audio_utils import Mixer
 from .shift_register import InputShiftRegister, OutputShiftRegister
 from .config import config
@@ -26,41 +25,56 @@ if '-p' in sys.argv:
     config.START_PROGRAM = sys.argv[2]
 
 class GameClock:
-  """Fixed-timestep clock that paces the loop to ``FPS`` frames per second.
+  """Fixed-timestep pacer that holds the loop at ``fps`` frames per second.
 
-  Tracks a target "playhead" (frame * target_dt) versus the actual elapsed
-  time and sleeps to absorb the difference, so frames don't drift fast.
+  Built on the monotonic :mod:`src.clock`, so it is immune to wall-clock / NTP /
+  RTC adjustments (see that module for the bug this prevents). Each frame it
+  sleeps until the next frame's scheduled time, then reports the real elapsed
+  ``dt``.
+
+  It is deliberately **not** a "make up lost time" clock. The previous design
+  paced against an absolute playhead (``frame * target_dt`` vs elapsed); after
+  any large gap -- a wall-clock leap, or a long stall -- it would stop sleeping
+  and free-run for thousands of frames to catch the playhead up, compressing
+  every frame-counted timeout. Here, if the loop falls more than
+  ``MAX_FRAME_SKIP`` frames behind, the backlog is dropped and the schedule
+  resyncs to *now*; the returned ``dt`` is clamped the same way, so a one-off
+  hiccup can never inject a huge time step into game logic.
 
   Args:
-      FPS: Target frames per second.
+      fps: Target frames per second.
   """
-  def __init__(self, FPS):
-    self.FPS = FPS
-    self.target_dt = 1/FPS
-    self.t0 = time.time()
-    self.t = self.t0
-    self.prev_t = self.t0
-    self.frame = 0
-    self.target_playhead = 0
-    self.actual_playhead = 0
-    self.dt_history = deque(maxlen=60*10)
+  MAX_FRAME_SKIP = 5  # frames of backlog tolerated before we resync instead of catching up
 
-  def tick(self, fps):
-    """Sleep to hold the target frame rate; return the frame's dt in ms."""
-    self.t = time.time()
-    self.target_playhead = self.frame * self.target_dt
-    self.actual_playhead = self.t - self.t0
-    wait = self.target_playhead - self.actual_playhead
+  def __init__(self, fps):
+    self.fps = fps
+    self.target_dt = 1.0 / fps
+    self.max_lag = self.MAX_FRAME_SKIP * self.target_dt
+    now = clock.monotonic()
+    self.prev = now
+    self.next_frame = now + self.target_dt
+
+  def tick(self):
+    """Sleep until the next frame is due; return the elapsed ``dt`` in ms."""
+    now = clock.monotonic()
+    wait = self.next_frame - now
     if wait > 0:
-      #print('waiting ms:', wait*1000)
-      time.sleep(wait)
+      clock.sleep(wait)
+      now = clock.monotonic()
 
-    dt = self.t - self.prev_t
-    #print('dt ms:', dt*1000)
-    self.dt_history.append(dt)
-    self.prev_t = self.t
-    self.frame += 1
-    return dt*1000
+    # Real frame period, clamped so a stall can't spike dt for game logic.
+    dt = now - self.prev
+    if dt > self.max_lag:
+      dt = self.target_dt
+    self.prev = now
+
+    # Schedule the next frame. If we've fallen too far behind (long stall or any
+    # clock anomaly), drop the backlog and resync rather than free-run to catch up.
+    self.next_frame += self.target_dt
+    if self.next_frame < now - self.max_lag:
+      self.next_frame = now + self.target_dt
+
+    return dt * 1000.0
 
 class LaserPort:
   """One laser's on/off state. Should only be accessed through :class:`LaserBay`.
@@ -138,6 +152,10 @@ class Game:
   """
   def __init__(self, PISOreg, SIPOreg, mixer, events):
     self.FPS = config.FPS
+    # Monotonic game-loop time in ms since the loop started: the sum of every
+    # frame's real dt. The single timeline programs read (via ``self.now_ms``)
+    # to set and check deadlines -- immune to wall-clock jumps by construction.
+    self.now_ms = 0.0
     self.input_manager = InputManager(register=PISOreg)
     self.outputs = OutputManager(register=SIPOreg)
     self.lasers = LaserBay(14) # users interact with this to drive laser output
@@ -153,6 +171,9 @@ class Game:
 
   def update(self, dt):
     """One frame of logic: poll input, advance animations, update the program."""
+    # advance the monotonic game-loop clock by this frame's elapsed time first,
+    # so every deadline set or checked this frame sees a consistent ``now_ms``.
+    self.now_ms += dt
     # read input
     self.input_manager.poll()
     changed_state = self.input_manager.changed_state
@@ -179,7 +200,7 @@ class Game:
     exit path, the ``finally`` clears the lasers and releases GPIO/pygame.
     """
     self._running = True
-    self.t_game_start = time.time()
+    self.t_game_start = clock.monotonic()
     self.clock = GameClock(self.FPS)
     self._install_signal_handlers()
     self.lasers.set_word(0)  # begin with every laser off
@@ -190,7 +211,7 @@ class Game:
         while self._running:
           self.update(dt)
           self.render()
-          dt = self.clock.tick(self.FPS)
+          dt = self.clock.tick()
           dts.append(dt)
     except KeyboardInterrupt:
         print('goodbye.')
