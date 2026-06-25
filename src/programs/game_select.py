@@ -26,9 +26,15 @@ class GameSelect(Program):
 
     * first press announces ("reboot"/"shutdown") and lights the slot,
     * second press arms it (lights every laser, plays the confirm prompt),
-    * third press executes the action,
-    * pressing *any other button* while a system slot is armed cancels it and
-      returns to the menu; it also expires after ``ARM_TIMEOUT_MS``.
+    * third press executes the action (after a spoken "rebooting/shutting down
+      now" confirmation),
+    * pressing *any other button* while a system slot is armed cancels it; if
+      that button is itself a menu slot it then arms normally (announces its
+      name), exactly like the rest of the menu. The arm also expires after
+      ``ARM_TIMEOUT_MS``.
+
+    Any button press while a system slot's (long) confirm prompt is still
+    speaking cuts it short, so a quick confirm/cancel isn't talked over.
 
     Unassigned buttons are ignored.
     """
@@ -84,6 +90,7 @@ class GameSelect(Program):
         for spec in self.system_menu.values():
             self._load(self._effect_path(spec['announce']))
             self._load(self._effect_path(spec['confirm']))
+            self._load(self._effect_path(spec['execute']))
 
     def _load(self, path):
         try:
@@ -96,6 +103,18 @@ class GameSelect(Program):
             self.game.mixer.play_effect(path)
         except Exception as e:
             print(f'[GameSelect] could not play effect {path!r}: {e}')
+
+    def _stop_voice(self):
+        """Cut any in-progress announcement short.
+
+        GameSelect only ever plays one-shot voice effects (no music stream), so
+        stopping every channel just silences the current spoken line -- used to
+        keep the long confirm prompt from talking over a quick confirm/cancel.
+        """
+        try:
+            pygame.mixer.stop()
+        except Exception as e:
+            print(f'[GameSelect] could not stop audio: {e}')
 
     def _announce_file(self, button_id):
         """The name announcement for a slot (game or system)."""
@@ -144,22 +163,44 @@ class GameSelect(Program):
 
     def _execute_system_action(self, button_id):
         """Fire the reboot/shutdown command (no-op under the simulator)."""
-        action = self.system_menu[button_id]['action']
+        spec = self.system_menu[button_id]
+        action = spec['action']
         argv = self.system_actions[action]
         self.game.lasers.set_word(self.ALL_LASERS)
         self.power_committed = True            # ignore all further input
+
+        # Audible "rebooting/shutting down now" confirmation. The caller has
+        # already cut the confirm prompt short, so this won't overlap.
+        execute_file = self._effect_path(spec['execute'])
+        self._play(execute_file)
+
         if '-s' in sys.argv:
             print(f'[GameSelect] SIMULATED system action {action!r}: {argv}')
             return
         print(f'[GameSelect] executing system action {action!r}: {argv}')
         try:
-            # Fire-and-forget: systemd then SIGTERMs us and game_loop's handler
-            # clears lasers/audio/GPIO. (Verified: passwordless sudo on the box.)
+            # Let the spoken confirmation finish before we issue the command:
+            # systemd then SIGTERMs us and game_loop's handler silences audio,
+            # which would otherwise clip "rebooting/shutting down now" mid-word.
+            self._wait_for_effect(execute_file)
+            # Fire-and-forget. (Verified: passwordless sudo on the box.)
             subprocess.Popen(argv)
         except Exception as e:
             print(f'[GameSelect] system action {action!r} failed: {e}')
             self.power_committed = False
             self._disarm()
+
+    def _wait_for_effect(self, path):
+        """Block until a just-played effect finishes (best effort).
+
+        Used only on the real box, right before issuing a power command, so the
+        spoken confirmation is heard in full before audio is torn down. Bounded
+        by the clip's own length so a stuck channel can't hang the box.
+        """
+        sound = self.game.mixer.effects.get(path)
+        if sound is None:
+            return
+        pygame.time.wait(int(sound.get_length() * 1000) + 100)
 
     def update(self, dt):
         super().update(dt)
@@ -176,6 +217,12 @@ class GameSelect(Program):
                 continue
             button_id = event.key
 
+            # While a power slot is armed its (long) confirm prompt may still be
+            # speaking; any press -- confirm or cancel -- cuts it short so it
+            # doesn't talk over what happens next.
+            if self.armed in self.system_menu:
+                self._stop_voice()
+
             if button_id == self.armed:
                 is_game = button_id in self.menu
                 self._advance(button_id)
@@ -185,10 +232,11 @@ class GameSelect(Program):
                     return
                 continue
 
-            # a different button was pressed
+            # A different button was pressed. If a power slot was armed, this
+            # cancels it; then fall through so the new button arms normally
+            # (announcing its name) when it is itself a menu slot.
             if self.armed in self.system_menu:
-                self._disarm()      # any other button cancels a pending power action
-                continue
+                self._disarm()
             if not self._is_slot(button_id):
                 continue            # unassigned -> no-op
             self._arm(button_id)

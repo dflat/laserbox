@@ -103,7 +103,8 @@ def main():
     check("unassigned button -> no arm", game.state_machine.program.armed is None)
     check("unassigned button -> still GameSelect", prog() == "GameSelect")
 
-    # 8. system slot (btn12 reboot): a different button cancels the pending action
+    # 8. system slot (btn12 reboot): a different button cancels the pending
+    #    action; if that button is itself a menu slot it re-arms to it.
     ALL_LASERS = (1 << 14) - 1
     game.state_machine.enter_game_select()
     gs = game.state_machine.program
@@ -113,11 +114,23 @@ def main():
     check("system arm lights only slot 12", game.lasers.to_word() == (1 << 12))
     check("system arm not yet committed", gs.power_committed is False)
     step(0)
-    step(1 << 0)       # any other button cancels and returns to menu
-    check("other button cancels power arm", gs.armed is None)
-    check("cancel did not arm the other button", gs.armed is None)
+    step(1 << 0)       # a menu button cancels the power arm AND arms itself
+    check("menu button cancels power arm + re-arms to it", gs.armed == 0)
+    check("re-armed button lights its own laser", game.lasers.to_word() == (1 << 0))
     check("still GameSelect after cancel", prog() == "GameSelect")
     check("not committed after cancel", gs.power_committed is False)
+
+    # 8b. an *unassigned* button cancels the power arm without re-arming.
+    game.state_machine.enter_game_select()
+    gs = game.state_machine.program
+    step(0)
+    step(1 << 12)      # arm reboot again
+    check("re-armed btn12", gs.armed == 12)
+    step(0)
+    step(1 << 8)       # unassigned -> cancels, nothing re-armed
+    check("unassigned button cancels power arm", gs.armed is None)
+    check("unassigned cancel leaves lasers off", game.lasers.to_word() == 0)
+    check("not committed after unassigned cancel", gs.power_committed is False)
 
     # 9. system slot (btn13 shutdown): three presses execute (simulated under -s)
     step(0)

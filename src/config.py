@@ -129,17 +129,23 @@ class config:
         # These do NOT launch a program; they reboot/shut down the box. To guard
         # against accidental triggering they use a three-press confirm flow (see
         # GameSelect): 1st press announces, 2nd press arms (plays ``confirm``),
-        # 3rd press executes. Pressing any other button while armed cancels and
-        # returns to the menu. ``announce``/``confirm`` are wavs under
+        # 3rd press executes (plays ``execute`` -- the "doing it now" line).
+        # Pressing any other button while armed cancels and returns to the menu
+        # (re-arming to that button if it is itself a menu slot).
+        # ``announce``/``confirm``/``execute`` are wavs under
         # assets/sounds/effects/menu/ ; ``action`` keys into SYSTEM_ACTIONS.
         SYSTEM_MENU = {
             12: dict(
-                action="reboot", announce="reboot.wav", confirm="reboot_confirm.wav"
+                action="reboot",
+                announce="reboot.wav",
+                confirm="reboot_confirm.wav",
+                execute="reboot_now.wav",
             ),
             13: dict(
                 action="poweroff",
                 announce="shutdown.wav",
                 confirm="shutdown_confirm.wav",
+                execute="shutdown_now.wav",
             ),
         }
 
