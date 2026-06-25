@@ -53,7 +53,6 @@ class SimonSays(Program):
         self.on_ms = cfg.ON_MS
         self.gap_ms = cfg.GAP_MS
         self.cheer_ms = cfg.CHEER_MS
-        self.idle_ms = cfg.IDLE_MS
 
         # Audio: ascending kicks per step, plus spoken/buzzer feedback. Loaded in
         # start() (not __init__) so it is valid against the current mixer.
@@ -69,11 +68,13 @@ class SimonSays(Program):
         self.lives = self.max_lives
         self.accepting_input = False
         self.awaiting_start = True
-        self.last_activity_ms = 0
-        self._clock_ms = 0
 
         self.game.lasers.set_word(0)
+        # Play the welcome line, then start on our own once it finishes; a press
+        # during it skips the rest and starts immediately (see _on_button_down).
+        welcome_ms = self.game.mixer.effects[self.WELCOME].get_length() * 1000
         self.game.mixer.play_effect(self.WELCOME)
+        self.after(welcome_ms, self._auto_begin)
 
     def quit(self):
         """Clear the lasers and hand control back to the state machine."""
@@ -82,31 +83,23 @@ class SimonSays(Program):
 
     # -- per-frame update ---------------------------------------------------
     def update(self, dt):
-        """Drain input and nudge a stalled player by re-showing the pattern."""
+        """Drain the input queue into the game logic each frame."""
         super().update(dt)
-        self._clock_ms += dt
-
         for event in events.get():
             if event.type == EventType.BUTTON_DOWN:
                 self._on_button_down(event.key)
             elif event.type == EventType.BUTTON_UP:
                 self._on_button_up(event.key)
 
-        # Gentle nudge: re-demonstrate (no life lost) if the player stalls.
-        if (self.accepting_input
-                and self._clock_ms - self.last_activity_ms > self.idle_ms):
-            self.play_pattern()
-
     # -- input --------------------------------------------------------------
     def _on_button_down(self, button_id):
+        # A press during the welcome (any button) skips it and starts the game.
+        if self.awaiting_start:
+            return self._skip_welcome()
         if button_id not in self.play_buttons:
             return
-        if self.awaiting_start:
-            self.awaiting_start = False
-            return self.begin_game()
         if not self.accepting_input:
             return  # ignore presses while the box is demonstrating
-        self.last_activity_ms = self._clock_ms
         self._echo(button_id)
         if button_id == self.pattern[self.input_index]:
             self.input_index += 1
@@ -127,8 +120,19 @@ class SimonSays(Program):
             self.start_cooldown(button_id, ms=self.ECHO_COOLDOWN_MS)
 
     # -- game flow ----------------------------------------------------------
+    def _auto_begin(self):
+        """Welcome finished on its own: start the game, no press needed."""
+        self.awaiting_start = False
+        self.begin_game()
+
+    def _skip_welcome(self):
+        """A press during the welcome: cut it short and start the game now."""
+        self.scheduler = []  # drop the pending auto-start
+        self.game.mixer.effects[self.WELCOME].stop()
+        self._auto_begin()
+
     def begin_game(self):
-        """First press: refill lives, seed a length-1 pattern, and demo it."""
+        """Refill lives, seed a length-1 pattern, and demo it."""
         self.lives = self.max_lives
         self.pattern = [random.choice(self.play_buttons)]
         self.play_pattern()
@@ -155,7 +159,6 @@ class SimonSays(Program):
         self._clear_play_lasers()
         self.accepting_input = True
         self.input_index = 0
-        self.last_activity_ms = self._clock_ms
 
     def round_cleared(self):
         """Player nailed the round: win at WIN_LENGTH, else grow and replay.

@@ -65,7 +65,6 @@ class config:
         ON_MS = 450  # how long each demo step stays lit
         GAP_MS = 200  # dark gap between demo steps
         CHEER_MS = 1100  # pause after a cleared round (covers the affirmation)
-        IDLE_MS = 15000  # re-show pattern after this idle time
         PATCH = "kicks_ascending_mono"  # one ascending tone per button
 
     class Catch:

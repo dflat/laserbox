@@ -3,9 +3,11 @@
 Drives a real Game with a scripted input register (no display/keyboard). The
 demo timing normally runs on wall-clock ``after()`` callbacks; here we override
 ``after`` to fire callbacks *synchronously* so the round transitions are
-deterministic and fast. This tests the game logic (grow on success, lose a life
-on a miss, restart on game-over, win at WIN_LENGTH) -- not the real-time pacing,
-which is trivial and best eyeballed in the simulator. Run from repo root:
+deterministic and fast. This tests the game logic (auto-start / press-to-skip the
+welcome, grow on success, lose a life on a miss, restart on game-over, win at
+WIN_LENGTH, and that an idle player is never re-shown the pattern) -- not the
+real-time pacing, which is trivial and best eyeballed in the simulator. Run from
+repo root:
 
     SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy python3 scratch/test_simon_says.py
 """
@@ -64,13 +66,27 @@ def main():
         passed.append(bool(cond))
         print(("PASS" if cond else "FAIL"), "-", label)
 
+    # SimonSays is a registered singleton, so an instance-level override of
+    # after()/play_pattern() sticks across re-launches. start() now schedules the
+    # auto-start through after(), so we restore the real methods before each
+    # launch -- otherwise a leaked synchronous after() would auto-begin the game
+    # inside start() (and a leaked play_pattern stub would break later rounds).
+    simon = game.state_machine.PROGRAMS["SimonSays"]
+    real_after = simon.after
+    real_play_pattern = simon.play_pattern
+
+    def fresh_launch():
+        simon.after = real_after
+        simon.play_pattern = real_play_pattern
+        game.state_machine.launch_single_program("SimonSays")
+
     # --- wiring ---------------------------------------------------------
     check("SimonSays registered", "SimonSays" in game.state_machine.PROGRAMS)
     check("menu slot 5 is SimonSays",
           config.GameSelect.MENU.get(5, (None,))[0] == "SimonSays")
 
     # Launch the game directly (as the -p flag / menu would).
-    game.state_machine.launch_single_program("SimonSays")
+    fresh_launch()
     check("launched into SimonSays", name() == "SimonSays")
     check("awaiting start", prog().awaiting_start is True)
     check("starts with full lives", prog().lives == config.SimonSays.LIVES)
@@ -79,8 +95,9 @@ def main():
     prog().after = lambda ms, fn, *a, **k: fn(*a, **k)
 
     # --- happy path: play perfectly all the way to a win ----------------
-    press(0)  # any play button begins the game
-    check("first press leaves awaiting_start", prog().awaiting_start is False)
+    press(0)  # any button skips the welcome and begins the game
+    check("press skips the welcome (no longer awaiting start)",
+          prog().awaiting_start is False)
     check("round 1 opened for input", prog().accepting_input is True)
     check("seed pattern length 1", len(prog().pattern) == 1)
 
@@ -96,8 +113,30 @@ def main():
     check("pattern grew to WIN_LENGTH", max_len == config.SimonSays.WIN_LENGTH)
     check("winning quits back to GameSelect", name() == "GameSelect")
 
+    # --- auto-start: the welcome begins the game with no press needed ----
+    fresh_launch()
+    check("awaiting start before the welcome ends", prog().awaiting_start is True)
+    prog().after = lambda ms, fn, *a, **k: fn(*a, **k)  # fire callbacks now
+    prog()._auto_begin()  # far side of the scheduled welcome -> auto-start
+    check("auto-start begins with no press", prog().awaiting_start is False)
+    check("auto-start opens round 1", prog().accepting_input is True)
+    check("auto-start seeds length 1", len(prog().pattern) == 1)
+
+    # --- regression: an idle player is NEVER nudged with a pattern re-demo --
+    fresh_launch()
+    prog().after = lambda ms, fn, *a, **k: fn(*a, **k)
+    press(0)                                      # skip welcome -> round 1 open
+    prog().after = lambda ms, fn, *a, **k: None   # freeze any further scheduling
+    replays = [0]
+    prog().play_pattern = lambda: replays.__setitem__(0, replays[0] + 1)
+    for _ in range(int(30000 / dt)):              # ~30 s of frames with no input
+        step(0)
+    check("idle player is never re-shown the pattern", replays[0] == 0)
+    check("idle player keeps their turn (still accepting input)",
+          prog().accepting_input is True)
+
     # --- regression: the LAST correct press still lights its laser ------
-    game.state_machine.launch_single_program("SimonSays")
+    fresh_launch()
     prog().after = lambda ms, fn, *a, **k: fn(*a, **k)
     press(0)                                       # begin -> round 1 open
     prog().after = lambda ms, fn, *a, **k: None    # freeze: no instant grow/clear
@@ -110,7 +149,7 @@ def main():
     # --- mistake costs a life and replays the SAME round ----------------
     step(0)  # release the held button so the next round's begin press is a clean
              # down-edge even when its seeded step happens to be button 0
-    game.state_machine.launch_single_program("SimonSays")
+    fresh_launch()
     prog().after = lambda ms, fn, *a, **k: fn(*a, **k)
     press(0)                                   # begin
     first = prog().pattern[0]
