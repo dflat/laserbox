@@ -18,6 +18,7 @@ import pygame
 import os
 import subprocess
 import time
+from . import clock
 import threading
 from .config import config
 from .event_loop import SoundEndEvent, events
@@ -159,8 +160,8 @@ class Mixer:
 
     def _fade(self, start_vol, end_vol, fade_dur, fps=30):
         """Linearly ramp the music volume from ``start_vol`` to ``end_vol``."""
-        t0 = time.time()
-        while (t := time.time() - t0) < fade_dur:
+        t0 = clock.monotonic()
+        while (t := clock.monotonic() - t0) < fade_dur:
             vol = lerp(t/fade_dur, start_vol, end_vol)
             #print(f'vol: {vol:.2f}','t:', t)
             pygame.mixer.music.set_volume(vol)

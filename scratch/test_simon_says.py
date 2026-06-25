@@ -108,6 +108,8 @@ def main():
           bool(sipo.last & (1 << last)))
 
     # --- mistake costs a life and replays the SAME round ----------------
+    step(0)  # release the held button so the next round's begin press is a clean
+             # down-edge even when its seeded step happens to be button 0
     game.state_machine.launch_single_program("SimonSays")
     prog().after = lambda ms, fn, *a, **k: fn(*a, **k)
     press(0)                                   # begin

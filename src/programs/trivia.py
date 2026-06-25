@@ -156,24 +156,24 @@ class Trivia(Program):
                 self._on_button_down(event.key)
 
     def _check_timers(self):
-        tick = self.tick
+        now = self.now_ms
         if self.phase is _Phase.ASKING and self.buzz_deadline is not None:
             self._maybe_warn(self.buzz_deadline)
-            if tick > self.buzz_deadline:
+            if now > self.buzz_deadline:
                 self._no_buzz_timeout()
         elif self.phase is _Phase.ANSWERING and self.answer_deadline is not None:
             self._maybe_warn(self.answer_deadline)
-            if tick > self.answer_deadline:
+            if now > self.answer_deadline:
                 self._answer_timeout()
         elif self.phase is _Phase.READY:
-            if self.ready_deadline is not None and tick > self.ready_deadline:
+            if self.ready_deadline is not None and now > self.ready_deadline:
                 self._reprompt_ready()
 
     def _maybe_warn(self, deadline):
         """Announce 'five seconds remaining' once, WARNING_MS before a deadline."""
         if self._warned:
             return
-        if self.tick >= deadline - self._ticks(self.cfg.WARNING_MS):
+        if self.now_ms >= deadline - self.cfg.WARNING_MS:
             self._warned = True
             self.voice.say_line("five_seconds_remaining")
 
@@ -191,12 +191,12 @@ class Trivia(Program):
         self.phase = _Phase.READY
         self.ready = {"black": False, "white": False}
         self._all_off()
-        self.ready_deadline = self.tick + self._ticks(self.cfg.READY_REPROMPT_MS)
+        self.ready_deadline = self.now_ms + self.cfg.READY_REPROMPT_MS
         self.voice.say_line("ready_prompt")
 
     def _reprompt_ready(self):
         """A team stalled at the ready screen -- nudge with the prompt again."""
-        self.ready_deadline = self.tick + self._ticks(self.cfg.READY_REPROMPT_MS)
+        self.ready_deadline = self.now_ms + self.cfg.READY_REPROMPT_MS
         self.voice.say_line("ready_prompt")
 
     def _ready_buzz(self, button):
@@ -235,7 +235,7 @@ class Trivia(Program):
     def _question_fully_read(self):
         """Question read out with no buzz -> open a short post-question window."""
         if self.phase is _Phase.ASKING:
-            self.buzz_deadline = self.tick + self._ticks(self.cfg.POST_QUESTION_BUZZ_MS)
+            self.buzz_deadline = self.now_ms + self.cfg.POST_QUESTION_BUZZ_MS
             self._warned = False
 
     def _asking_buzz(self, button):
@@ -264,7 +264,7 @@ class Trivia(Program):
         self.current_team = team
         self.current_stakes = stakes
         self.armed_slot = None
-        self.answer_deadline = self.tick + self._ticks(self.cfg.ANSWER_TIMEOUT_MS)
+        self.answer_deadline = self.now_ms + self.cfg.ANSWER_TIMEOUT_MS
         self._warned = False
 
     def _answering_press(self, button):
@@ -274,7 +274,7 @@ class Trivia(Program):
         team, slot = mapping
         if team != self.current_team:
             return  # the other team's buttons are inert during this turn
-        self.answer_deadline = self.tick + self._ticks(self.cfg.ANSWER_TIMEOUT_MS)
+        self.answer_deadline = self.now_ms + self.cfg.ANSWER_TIMEOUT_MS
         self._warned = False               # activity resets the countdown + warning
         if slot == self.armed_slot:
             self._lock_in(slot)            # second press of the armed choice
@@ -399,9 +399,6 @@ class Trivia(Program):
         choice). Per-port turn_off keeps word and ports consistent."""
         for laser_id in range(14):
             self.game.lasers.turn_off(laser_id)
-
-    def _ticks(self, ms):
-        return max(1, int(config.FPS * ms / 1000))
 
     def _ordinal(self):
         """Ordinal token for the question intro clip ("sudden" past regulation)."""
