@@ -71,9 +71,9 @@ class config:
     class Catch:
         """Settings for :class:`~src.programs.catch.Catch`."""
 
-        TARGET = 3            # the fixed target laser/button to "catch" the blip on
-        N_PORTS = 14          # lasers the blip travels across (0 .. N_PORTS-1)
-        BLINK_HZ = 2          # target blink rate while waiting/chasing (twice a sec)
+        TARGET = 3  # the fixed target laser/button to "catch" the blip on
+        N_PORTS = 14  # lasers the blip travels across (0 .. N_PORTS-1)
+        BLINK_HZ = 2  # target blink rate while waiting/chasing (twice a sec)
 
         # ms per blip move at each progression level; each level is faster than
         # the last. The player climbs one level per successful catch (the blip
@@ -82,8 +82,8 @@ class config:
         # and must match ``LEVEL_SOUNDS``.
         LEVEL_STEP_MS = (120, 90, 65)
 
-        LEVEL_ADVANCE_MS = 1500   # pause (under the announcement) between levels
-        MISS_RESET_MS = 2000      # pause after a miss before re-arming at level 1
+        LEVEL_ADVANCE_MS = 1500  # pause (under the announcement) between levels
+        MISS_RESET_MS = 2000  # pause after a miss before re-arming at level 1
 
         # Voice / sfx, paths under assets/sounds/effects. The announcements are
         # edge-tts (en-AU-WilliamMultilingualNeural); the level lines double as
@@ -95,7 +95,7 @@ class config:
             "catch/level_3.wav",
         )
         MISS_SOUND = "catch/miss.wav"
-        WIN_SOUND = "positive/congrats_extended.wav"   # Golf-style big celebration
+        WIN_SOUND = "positive/congrats_extended.wav"  # Golf-style big celebration
 
     class GameSelect:
         """Settings for :class:`~src.programs.game_select.GameSelect`."""
@@ -133,10 +133,14 @@ class config:
         # returns to the menu. ``announce``/``confirm`` are wavs under
         # assets/sounds/effects/menu/ ; ``action`` keys into SYSTEM_ACTIONS.
         SYSTEM_MENU = {
-            12: dict(action="reboot",
-                     announce="reboot.wav", confirm="reboot_confirm.wav"),
-            13: dict(action="poweroff",
-                     announce="shutdown.wav", confirm="shutdown_confirm.wav"),
+            12: dict(
+                action="reboot", announce="reboot.wav", confirm="reboot_confirm.wav"
+            ),
+            13: dict(
+                action="poweroff",
+                announce="shutdown.wav",
+                confirm="shutdown_confirm.wav",
+            ),
         }
 
         # action -> argv run (fire-and-forget) when a SYSTEM_MENU slot is
@@ -160,9 +164,9 @@ class config:
         """
 
         # --- match shape ---
-        QUESTIONS_PER_MATCH = 7       # questions per match; highest score wins
-        DIFFICULTY = "any"            # any | easy | medium | hard (OpenTDB filter)
-        CATEGORY = None               # None = any; else an OpenTDB category id (int)
+        QUESTIONS_PER_MATCH = 7  # questions per match; highest score wins
+        DIFFICULTY = "any"  # any | easy | medium | hard (OpenTDB filter)
+        CATEGORY = None  # None = any; else an OpenTDB category id (int)
 
         # --- timing (milliseconds) ---
         # Choice-selection deadline after a buzz; set ONCE per turn and never reset
@@ -171,21 +175,21 @@ class config:
         # Buzz window after the question + choices finish reading. Short and with
         # NO warning (the window is the warning).
         POST_QUESTION_BUZZ_MS = 5000
-        WARNING_MS = 5000             # "five seconds remaining" warning before the answer deadline
-        VO_GAP_MS = 120               # gap inserted between chained voice-over clips
-        READY_REPROMPT_MS = 12000     # re-announce "buzz to begin" if a team stalls
+        WARNING_MS = 5000  # "five seconds remaining" warning before the answer deadline
+        VO_GAP_MS = 120  # gap inserted between chained voice-over clips
+        READY_REPROMPT_MS = 12000  # re-announce "buzz to begin" if a team stalls
 
         # --- teams (named for the keycap colours on each half of the box) ---
-        BLACK_BUZZ = 6                # left endcap
-        WHITE_BUZZ = 7                # right endcap
-        BLACK_CHOICES = (0, 1, 2, 3)        # choice slot i -> this button id
-        WHITE_CHOICES = (13, 12, 11, 10)    # mirror of the black side
+        BLACK_BUZZ = 6  # left endcap
+        WHITE_BUZZ = 7  # right endcap
+        BLACK_CHOICES = (0, 1, 2, 3)  # choice slot i -> this button id
+        WHITE_CHOICES = (13, 12, 11, 10)  # mirror of the black side
 
         # --- scoring (a team may legitimately sit negative) ---
-        SCORE_FIRST_RIGHT = 2         # buzz first and answer correctly
-        SCORE_FIRST_WRONG = -1        # buzz first and miss (discourages blind buzzing)
-        SCORE_STEAL_RIGHT = 1         # take the steal correctly (you had more info)
-        SCORE_STEAL_WRONG = 0         # whiff the steal (no extra penalty)
+        SCORE_FIRST_RIGHT = 2  # buzz first and answer correctly
+        SCORE_FIRST_WRONG = -1  # buzz first and miss (discourages blind buzzing)
+        SCORE_STEAL_RIGHT = 1  # take the steal correctly (you had more info)
+        SCORE_STEAL_WRONG = 0  # whiff the steal (no extra penalty)
 
         # --- source / voice selection ---
         # FORCE_MODE: None auto-detects at start(); otherwise pin a (source, voice)
@@ -204,8 +208,8 @@ class config:
         # ordered, predetermined match), a whitelist only narrows the random pool.
         # CURATED_PLAYLIST takes precedence if both are set. Build whitelists with
         # ``tools/trivia_whitelist.py``.
-        WHITELIST = None
-        FETCH_TIMEOUT_S = 3           # OpenTDB request timeout, seconds (live mode)
+        WHITELIST = "july"
+        FETCH_TIMEOUT_S = 3  # OpenTDB request timeout, seconds (live mode)
         # Only relevant if/when a runtime TTS path exists; piper cannot run on the
         # box's ARMv6 Pi Zero W, so PiperVoice is currently a stub.
         PIPER_MODEL = "en_GB-alan-medium"
@@ -213,4 +217,4 @@ class config:
         # --- asset paths ---
         BANK_PATH = "assets/trivia/bank.json"  # question bank (JSON), repo-relative
         WHITELIST_DIR = "assets/trivia/whitelists"  # named bank-subset whitelists
-        EFFECT_DIR = "trivia"          # voice-over root under assets/sounds/effects
+        EFFECT_DIR = "trivia"  # voice-over root under assets/sounds/effects
