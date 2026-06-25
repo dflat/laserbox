@@ -1,15 +1,19 @@
-"""Headless regression test for Flipper state leaking across re-entries.
+"""Headless regression test for Flipper's random deal and clean re-entries.
 
-Reproduces the bug where winning (or partially playing) Flipper corrupted the
-shared ``config.Flipper.START_BOARD`` list in place, so re-entering the game
-restored the last board -- and, after a win, instantly re-triggered the
-"all lasers on" win condition.
+Covers two things:
+
+* The board is dealt fresh and **random** on every entry (between 1 and 5 lasers
+  lit -- never empty, never the all-on board that would be an instant win),
+  rather than the old fixed start pattern that made every entry identical.
+* Winning (or partially playing) Flipper must not leak into the next entry: a
+  re-entry is always a fresh deal, never the previous won/all-on board.
 
 Run from repo root:
 
     SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy python3 scratch/test_flipper_reentry.py
 """
 import os
+import random
 import sys
 
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -38,23 +42,29 @@ class DummySIPO:
 
 
 TOGGLE0 = 1 << 14
-START_WORD = 0b010101   # config.Flipper.START_BOARD = (1,0,1,0,1,0) -> lasers 0,2,4
 ALL_ON = 0b111111       # win: all six lasers on
 
 
 def main():
+    # Seed for a deterministic, reproducible sequence of random deals.
+    random.seed(20240625)
+
     piso = ScriptedPISO()
     sipo = DummySIPO()
     game = Game(PISOreg=piso, SIPOreg=sipo, mixer=Mixer(), events=events)
     dt = 1000 / config.FPS
 
-    original_start_board = tuple(config.Flipper.START_BOARD)
-
     def prog():
         return game.state_machine.program.__class__.__name__
 
+    def flipper():
+        return game.state_machine.program
+
     def board_word():
         return game.lasers.to_word() & 0b111111
+
+    def on_count(word):
+        return bin(word).count("1")
 
     def step(word):
         piso.word = word
@@ -65,6 +75,12 @@ def main():
         # button 1 == Flipper in config.GameSelect.MENU: press to arm, press to launch
         step(0); step(1 << 1); step(0); step(1 << 1)
 
+    def exit_to_menu():
+        # global GameSelect entry gesture: hold buttons 0&1, toggle0 off->on->off
+        step(0b11)
+        step(0b11 | TOGGLE0)
+        step(0b11)
+
     passed = []
     def check(label, cond):
         passed.append(bool(cond))
@@ -73,34 +89,44 @@ def main():
     # boots into GameSelect
     check("boots into GameSelect", prog() == "GameSelect")
 
-    # --- first entry: board is the configured start pattern, not a win ---
+    lo, hi = config.Flipper.MIN_START_ON, config.Flipper.MAX_START_ON
+
+    # --- first entry: a fresh random board, valid and not already won ---
     launch_flipper()
     check("launched Flipper", prog() == "Flipper")
-    check("initial board == START_BOARD pattern", board_word() == START_WORD)
-    check("not won on entry", game.state_machine.program.won is False)
+    check(f"entry board has {lo}..{hi} lasers lit", lo <= on_count(board_word()) <= hi)
+    check("entry board is not an instant win", board_word() != ALL_ON)
+    check("not won on entry", flipper().won is False)
 
-    # --- play to a win: pressing buttons 2,3,4 turns all six lasers on ---
-    for b in (2, 3, 4):
-        step(1 << b); step(0)
-    check("reached win (all lasers on)", board_word() == ALL_ON)
-    check("win detected", game.state_machine.program.won is True)
+    # --- the deal is randomised across entries (not a fixed pattern) ---
+    seen = {board_word()}
+    within_bounds = True
+    for _ in range(15):
+        exit_to_menu()
+        check("gesture exit -> GameSelect", prog() == "GameSelect")
+        launch_flipper()
+        w = board_word()
+        seen.add(w)
+        within_bounds = within_bounds and (lo <= on_count(w) <= hi)
+    check(f"every entry stays within {lo}..{hi} lit", within_bounds)
+    check("the deal varies across entries (randomised)", len(seen) > 1)
+    check("no entry is ever the all-on instant win", ALL_ON not in seen)
 
-    # core invariant: playing must NOT have mutated the shared config list
-    check("config.Flipper.START_BOARD unmutated",
-          tuple(config.Flipper.START_BOARD) == original_start_board)
+    # --- a win must not carry over into the next entry ---
+    p = flipper()
+    p.board = [1] * 6      # force the winning all-on state
+    p.update_laser()
+    step(0)                # one tick detects the win
+    check("win detected when all six are lit", p.won is True)
 
-    # --- exit via the GameSelect entry gesture (hold btns 0&1, toggle0 x2) ---
-    step(0b11)
-    step(0b11 | TOGGLE0)
-    step(0b11)
-    check("gesture exit -> GameSelect", prog() == "GameSelect")
-
-    # --- re-enter Flipper: must be a fresh start, NOT the won board ---
+    exit_to_menu()
+    check("gesture exit after a win -> GameSelect", prog() == "GameSelect")
     launch_flipper()
     check("re-launched Flipper", prog() == "Flipper")
-    check("re-entry board reset to START_BOARD", board_word() == START_WORD)
-    check("re-entry not an instant win", board_word() != ALL_ON)
-    check("re-entry won flag is False", game.state_machine.program.won is False)
+    check("re-entry is a fresh deal, not the won board", board_word() != ALL_ON)
+    check(f"re-entry board has {lo}..{hi} lasers lit",
+          lo <= on_count(board_word()) <= hi)
+    check("re-entry won flag is False", flipper().won is False)
 
     print()
     if all(passed):

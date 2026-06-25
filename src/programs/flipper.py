@@ -1,7 +1,8 @@
 """Flipper: a "Lights Out" style puzzle on 6 lasers.
 
 Pressing a button toggles its laser and its immediate neighbours. The round is
-won when all six lasers are on. A toggle switch reshuffles the board.
+won when all six lasers are on. The board is dealt at random (1-5 lasers lit) on
+every entry, and a toggle switch reshuffles it.
 """
 from .base import *
 from ..event_loop import *
@@ -24,18 +25,22 @@ class Flipper(Program):
         board = [0]*n
         return board
 
-    def create_board_pattern(self, diffuclty=0, fixed=None):
-        """Populate the board (random, or a ``fixed`` pattern) and show it."""
-        if fixed:
-            # copy, never alias: flip() mutates self.board in place, so binding
-            # it directly to a caller-owned list (e.g. config.Flipper.START_BOARD)
-            # would corrupt that list across runs and leak state between entries.
-            self.board = list(fixed)
-            print(fixed)
-        else:
-            for i in range(len(self.board)):
-                state = random.randint(0,1)
-                self.board[i] = state
+    def random_board(self, n=6):
+        """Return a length-``n`` board with a random number of cells lit.
+
+        The lit count is bounded to ``config.Flipper.MIN_START_ON`` ..
+        ``MAX_START_ON`` so every deal is playable: never empty, and never the
+        all-on board (which would be an instant win).
+        """
+        k = random.randint(config.Flipper.MIN_START_ON, config.Flipper.MAX_START_ON)
+        board = [0] * n
+        for i in random.sample(range(n), k):
+            board[i] = 1
+        return board
+
+    def create_board_pattern(self):
+        """Deal a fresh random board and show it on the lasers."""
+        self.board = self.random_board(len(self.board))
         self.update_laser()
 
     def update_laser(self):
@@ -84,7 +89,7 @@ class Flipper(Program):
         self.win_dur = self.game.mixer.effects[self.congrats_sound].get_length()
         self.win_animation = random_k_dance(k=3, fps=6, dur=self.win_dur - 1.2)
         self.board = self.create_board()
-        self.create_board_pattern(fixed=config.Flipper.START_BOARD)
+        self.create_board_pattern()  # fresh random deal each entry
         self.won = False
         self.playing = True
 
@@ -115,8 +120,7 @@ class Flipper(Program):
                 pass
 
             elif isinstance(event, ToggleEvent):
-                toggle_state = self.game.input_manager.state.toggles
-                self.create_board_pattern(fixed=False)
+                self.create_board_pattern()  # a toggle reshuffles the board
                 self.won = False
 
         self.won = self.check_for_win()

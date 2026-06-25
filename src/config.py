@@ -48,8 +48,10 @@ class config:
     class Flipper:
         """Settings for :class:`~src.programs.flipper.Flipper`."""
 
-        # tuple (immutable) so it can't be mutated in place if ever aliased.
-        START_BOARD = (1, 0, 1, 0, 1, 0)
+        # A fresh board is dealt at random on entry; the lit-laser count is
+        # bounded so the deal is never empty and never an instant win (all six).
+        MIN_START_ON = 1
+        MAX_START_ON = 5
 
     class Golf:
         """Settings for :class:`~src.programs.golf.Golf`."""
