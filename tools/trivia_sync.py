@@ -6,7 +6,7 @@ This is the *sync-time* half of Trivia: it runs on a desktop with internet,
 the local bank + pre-rendered audio the box plays back offline. It never runs on
 the Pi.
 
-Three jobs, mix and match:
+Four jobs, mix and match:
 
 * ``--fetch N``    pull N multiple-choice questions from OpenTDB and **append**
                    (by id, no duplicates) to ``assets/trivia/bank.json``.
@@ -14,11 +14,14 @@ Three jobs, mix and match:
                    doesn't already have them.
 * ``--static``     render the fixed lines, question ordinals, number clips, and
                    the GameSelect ``menu/trivia.wav`` announcement.
+* ``--purge``      **delete** bank records + baked audio for every question id
+                   *not* referenced by any whitelist or ``CURATED_PLAYLIST``
+                   (prints a plan and asks first; pass ``--yes`` to skip).
 
 All audio is edge-tts with the project voice, converted to the house format
 (22050 Hz / mono / 16-bit) to match the rest of ``assets/sounds``. Existing wavs
-are skipped unless ``--force``. The tool ``git add``s new files (LFS picks up the
-wavs) but never commits or pushes -- that's left to you.
+are skipped unless ``--force``. The tool ``git add``s new/removed files (LFS picks
+up the wavs) but never commits or pushes -- that's left to you.
 
 Examples::
 
@@ -26,10 +29,12 @@ Examples::
     python tools/trivia_sync.py --bake                   # voice the current bank
     python tools/trivia_sync.py --fetch 40 --bake        # grow the bank + voice it
     python tools/trivia_sync.py --fetch 20 --difficulty medium --category 18
+    python tools/trivia_sync.py --purge                  # trim to referenced ids
 """
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -45,6 +50,8 @@ SAMPLE_RATE, CHANNELS = 22050, 1                 # house audio format
 BANK_PATH = os.path.join(REPO_ROOT, config.Trivia.BANK_PATH)
 EFFECTS_ROOT = os.path.join(REPO_ROOT, "assets", "sounds", "effects")
 TRIVIA_DIR = os.path.join(EFFECTS_ROOT, "trivia")
+Q_AUDIO_DIR = os.path.join(TRIVIA_DIR, "q")      # per-question baked audio folders
+WHITELIST_DIR = os.path.join(REPO_ROOT, config.Trivia.WHITELIST_DIR)
 
 # Fixed lines whose text never depends on a question. Keys are paths under the
 # trivia effects dir; they mirror PrebakedVoice.STATIC.
@@ -224,6 +231,145 @@ def do_static(max_questions: int, max_score: int, force: bool):
     print(f"static bake complete: {wrote} clip(s) written")
 
 
+# -- purge ------------------------------------------------------------------
+
+def _resolve_playlist_ids(playlist, records) -> list:
+    """Resolve a CURATED_PLAYLIST (ids and/or positional indices) to ids."""
+    ids = []
+    for entry in playlist:
+        if isinstance(entry, bool):  # bool is an int subclass; never an index
+            continue
+        if isinstance(entry, int):
+            if 0 <= entry < len(records):
+                ids.append(records[entry]["id"])
+            else:
+                print(f"  warning: CURATED_PLAYLIST index {entry} out of range; ignored")
+        elif isinstance(entry, str):
+            ids.append(entry)
+    return ids
+
+
+def _whitelist_ids():
+    """Union of ids across every whitelist JSON, with per-file counts for report."""
+    ids, per_file = set(), []
+    if not os.path.isdir(WHITELIST_DIR):
+        return ids, per_file
+    for fn in sorted(os.listdir(WHITELIST_DIR)):
+        if not fn.endswith(".json"):
+            continue
+        path = os.path.join(WHITELIST_DIR, fn)
+        try:
+            with open(path, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"  warning: skipping unreadable whitelist {fn}: {e}")
+            continue
+        raw = data.get("ids", []) if isinstance(data, dict) else data
+        file_ids = [i for i in raw if isinstance(i, str)]
+        ids.update(file_ids)
+        per_file.append((f"whitelist {fn}", len(file_ids)))
+    return ids, per_file
+
+
+def _audio_ids():
+    """Question ids that have a baked audio folder under ``q/``."""
+    if not os.path.isdir(Q_AUDIO_DIR):
+        return set()
+    return {name for name in os.listdir(Q_AUDIO_DIR)
+            if os.path.isdir(os.path.join(Q_AUDIO_DIR, name))}
+
+
+def _referenced_ids(records):
+    """Set of ids kept alive by any whitelist or CURATED_PLAYLIST, plus a report.
+
+    Returns ``(referenced_ids, sources, playlist_uses_indices)`` where ``sources``
+    is a list of ``(label, count)`` for the plan print-out.
+    """
+    referenced, sources = _whitelist_ids()
+    playlist = config.Trivia.CURATED_PLAYLIST or []
+    pl_ids = _resolve_playlist_ids(playlist, records)
+    if playlist:
+        referenced.update(pl_ids)
+        sources.append(("config.Trivia.CURATED_PLAYLIST", len(pl_ids)))
+    uses_indices = any(isinstance(e, int) and not isinstance(e, bool)
+                       for e in playlist)
+    return referenced, sources, uses_indices
+
+
+def do_purge(yes: bool, allow_empty: bool):
+    """Delete bank records + baked audio for ids no curation references.
+
+    Kept = the union of every whitelist's ids and ``CURATED_PLAYLIST`` (positional
+    indices resolved against the current bank). Everything else with a bank record
+    or a ``q/<id>/`` audio folder is removed. Prints a plan and confirms first
+    unless ``yes`` is set; refuses to run when nothing is referenced (which would
+    wipe everything) unless ``allow_empty`` is set.
+    """
+    records = load_bank()
+    bank_ids = {r["id"] for r in records}
+    audio_ids = _audio_ids()
+    referenced, sources, uses_indices = _referenced_ids(records)
+
+    if not referenced and not allow_empty:
+        sys.exit(
+            "refusing to purge: no whitelist or CURATED_PLAYLIST references "
+            "anything, so a purge would delete the ENTIRE bank and all audio. "
+            "Build a whitelist (tools/trivia_whitelist.py) or set "
+            "config.Trivia.CURATED_PLAYLIST first, or pass --allow-empty to wipe "
+            "everything on purpose.")
+
+    present = bank_ids | audio_ids
+    to_remove = present - referenced
+    bank_remove = sorted(i for i in to_remove if i in bank_ids)
+    audio_remove = sorted(i for i in to_remove if i in audio_ids)
+    refs_missing = sorted(i for i in referenced if i not in present)
+
+    print("purge plan:")
+    print(f"  referenced ids kept: {len(referenced)}")
+    for label, n in sources:
+        print(f"    - {label}: {n} id(s)")
+    if refs_missing:
+        print(f"  note: {len(refs_missing)} referenced id(s) have no assets to "
+              f"keep (stale references): {', '.join(refs_missing)}")
+    print(f"  bank questions to remove ({len(bank_remove)}):")
+    for i in bank_remove:
+        print(f"    - {i}")
+    print(f"  audio folders to remove ({len(audio_remove)}):")
+    for i in audio_remove:
+        print(f"    - q/{i}/")
+
+    if not bank_remove and not audio_remove:
+        print("nothing to purge; every asset is referenced")
+        return
+
+    if not yes:
+        if not sys.stdin.isatty():
+            sys.exit("refusing to purge without confirmation; re-run with --yes")
+        ans = input(f"delete {len(bank_remove)} question(s) and "
+                    f"{len(audio_remove)} audio folder(s)? [y/N] ").strip().lower()
+        if ans != "y":
+            print("aborted; nothing deleted")
+            return
+
+    # rewrite the bank without removed records (preserve order + the _note)
+    kept = [r for r in records if r["id"] not in to_remove]
+    extra = {}
+    if os.path.exists(BANK_PATH):
+        with open(BANK_PATH, encoding="utf-8") as fh:
+            doc = json.load(fh)
+        if isinstance(doc, dict) and "_note" in doc:
+            extra["_note"] = doc["_note"]
+    save_bank(kept, extra)
+    for i in audio_remove:
+        shutil.rmtree(os.path.join(Q_AUDIO_DIR, i), ignore_errors=True)
+    print(f"purged {len(bank_remove)} question(s) and {len(audio_remove)} audio "
+          f"folder(s); bank now has {len(kept)}")
+    if uses_indices and bank_remove:
+        print("WARNING: CURATED_PLAYLIST uses positional indices and the bank was "
+              "compacted -- those indices have now shifted. Switch CURATED_PLAYLIST "
+              "to question ids to stay correct.")
+
+
 def git_add():
     """Stage new/changed assets (LFS handles the wavs). No commit/push."""
     try:
@@ -254,10 +400,17 @@ def main(argv=None):
                    help="highest 'Question N' ordinal to bake (default 12)")
     p.add_argument("--max-score", type=int, default=None,
                    help="highest score number to bake (default 2*QUESTIONS_PER_MATCH)")
+    p.add_argument("--purge", action="store_true",
+                   help="delete bank records + audio for ids not referenced by a "
+                        "whitelist or CURATED_PLAYLIST (asks first)")
+    p.add_argument("--yes", action="store_true",
+                   help="skip the --purge confirmation prompt")
+    p.add_argument("--allow-empty", action="store_true",
+                   help="permit --purge even when nothing is referenced (wipes all)")
     args = p.parse_args(argv)
 
-    if not (args.fetch or args.bake or args.static):
-        p.error("nothing to do: pass --fetch, --bake, and/or --static")
+    if not (args.fetch or args.bake or args.static or args.purge):
+        p.error("nothing to do: pass --fetch, --bake, --static, and/or --purge")
 
     if args.bake or args.static:
         _require_tools()
@@ -270,6 +423,8 @@ def main(argv=None):
         do_static(args.max_questions, max_score, args.force)
     if args.bake:
         do_bake(args.force)
+    if args.purge:
+        do_purge(args.yes, args.allow_empty)
 
     git_add()
 
