@@ -100,7 +100,8 @@ class Voice:
 
     def preload(self, questions): ...
     def say_line(self, key, on_done=None): ...
-    def say_question(self, question, number=None, on_done=None, with_intro=True): ...
+    def say_question(self, question, number=None, on_done=None, with_intro=True,
+                     with_choices=False): ...
     def say_choice(self, question, slot, on_done=None): ...
     def say_correct_answer(self, question, on_done=None): ...
     def say_score(self, black, white, on_done=None): ...
@@ -141,6 +142,11 @@ class PrebakedVoice(Voice):
         "sudden_death": "vo/sudden_death.wav",
         "black_team": "vo/black_team.wav",   # score-line components
         "white_team": "vo/white_team.wav",
+        # spoken choice labels read before each option ("A: ...", "B: ...")
+        "choice_label_0": "vo/choice_label_a.wav",
+        "choice_label_1": "vo/choice_label_b.wav",
+        "choice_label_2": "vo/choice_label_c.wav",
+        "choice_label_3": "vo/choice_label_d.wav",
     }
 
     def __init__(self, mixer, schedule, gap_ms=None):
@@ -197,11 +203,17 @@ class PrebakedVoice(Voice):
     def say_line(self, key, on_done=None):
         self.seq.play(self._sounds([self.STATIC[key]]), on_done)
 
-    def say_question(self, question, number=None, on_done=None, with_intro=True):
+    def say_question(self, question, number=None, on_done=None, with_intro=True,
+                     with_choices=False):
         rels = []
         if with_intro and number is not None:
             rels.append(f"vo/question_{number}.wav")
         rels.append(self._q_clip(question, "question"))
+        if with_choices:
+            # read each option after its spoken letter: "A: ...", "B: ...", etc.
+            for i in range(len(question.choices)):
+                rels.append(self.STATIC[f"choice_label_{i}"])
+                rels.append(self._q_clip(question, f"choice{i}"))
         self.seq.play(self._sounds(rels), on_done)
 
     def say_choice(self, question, slot, on_done=None):
@@ -269,8 +281,10 @@ class SilentVoice(Voice):
     def say_line(self, key, on_done=None):
         self._record(("line", key), on_done)
 
-    def say_question(self, question, number=None, on_done=None, with_intro=True):
-        self._record(("question", question.id, number, with_intro), on_done)
+    def say_question(self, question, number=None, on_done=None, with_intro=True,
+                     with_choices=False):
+        self._record(("question", question.id, number, with_intro, with_choices),
+                     on_done)
 
     def say_choice(self, question, slot, on_done=None):
         self._record(("choice", question.id, slot), on_done)
@@ -313,7 +327,8 @@ def _make_source(kind, rng=None):
                              difficulty=config.Trivia.DIFFICULTY,
                              category=config.Trivia.CATEGORY, rng=rng)
     return BankSource(config.Trivia.QUESTIONS_PER_MATCH,
-                      playlist=config.Trivia.CURATED_PLAYLIST, rng=rng)
+                      playlist=config.Trivia.CURATED_PLAYLIST,
+                      whitelist=config.Trivia.WHITELIST, rng=rng)
 
 
 def _make_voice(kind, mixer, schedule):

@@ -165,9 +165,13 @@ class config:
         CATEGORY = None               # None = any; else an OpenTDB category id (int)
 
         # --- timing (milliseconds) ---
-        ANSWER_TIMEOUT_MS = 30000     # lock-in deadline after a buzz (auto-picks an armed choice)
-        POST_QUESTION_BUZZ_MS = 30000  # buzz window after a question reads out untouched
-        WARNING_MS = 5000             # "five seconds remaining" warning before either deadline
+        # Choice-selection deadline after a buzz; set ONCE per turn and never reset
+        # by selecting/re-arming a choice. Gets the WARNING_MS warning.
+        ANSWER_TIMEOUT_MS = 15000
+        # Buzz window after the question + choices finish reading. Short and with
+        # NO warning (the window is the warning).
+        POST_QUESTION_BUZZ_MS = 5000
+        WARNING_MS = 5000             # "five seconds remaining" warning before the answer deadline
         VO_GAP_MS = 120               # gap inserted between chained voice-over clips
         READY_REPROMPT_MS = 12000     # re-announce "buzz to begin" if a team stalls
 
@@ -193,6 +197,14 @@ class config:
         # Otherwise an ordered list of bank question ids (str) or positional indices
         # (int) -> a fixed "determined" match whose length becomes len(the list).
         CURATED_PLAYLIST = None
+        # WHITELIST: None = draw from the whole bank. Otherwise the name (no
+        # extension) of a whitelist file under WHITELIST_DIR; the match still
+        # randomly samples QUESTIONS_PER_MATCH distinct questions, but only from
+        # that whitelisted subset of the bank. Unlike CURATED_PLAYLIST (a fixed,
+        # ordered, predetermined match), a whitelist only narrows the random pool.
+        # CURATED_PLAYLIST takes precedence if both are set. Build whitelists with
+        # ``tools/trivia_whitelist.py``.
+        WHITELIST = None
         FETCH_TIMEOUT_S = 3           # OpenTDB request timeout, seconds (live mode)
         # Only relevant if/when a runtime TTS path exists; piper cannot run on the
         # box's ARMv6 Pi Zero W, so PiperVoice is currently a stub.
@@ -200,4 +212,5 @@ class config:
 
         # --- asset paths ---
         BANK_PATH = "assets/trivia/bank.json"  # question bank (JSON), repo-relative
+        WHITELIST_DIR = "assets/trivia/whitelists"  # named bank-subset whitelists
         EFFECT_DIR = "trivia"          # voice-over root under assets/sounds/effects

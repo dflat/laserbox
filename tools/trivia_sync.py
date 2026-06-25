@@ -62,6 +62,11 @@ STATIC_TEXT = {
     "vo/sudden_death.wav": "Sudden death!",
     "vo/black_team.wav": "Black team:",
     "vo/white_team.wav": "White team:",
+    # spoken choice labels read before each option during the question read-out
+    "vo/choice_label_a.wav": "A:",
+    "vo/choice_label_b.wav": "B:",
+    "vo/choice_label_c.wav": "C:",
+    "vo/choice_label_d.wav": "D:",
 }
 
 _ONES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
