@@ -63,12 +63,14 @@ class RecordingSilentVoice:
     def __init__(self):
         self.interrupts = 0
         self.lines = []
+        self.questions = []   # (question_id, with_intro, with_choices) per read-out
     def _done(self, on_done):
         if on_done:
             on_done()
     def preload(self, questions): pass
     def say_line(self, key, on_done=None): self.lines.append(key); self._done(on_done)
-    def say_question(self, q, number=None, on_done=None, with_intro=True): self._done(on_done)
+    def say_question(self, q, number=None, on_done=None, with_intro=True, with_choices=False):
+        self.questions.append((q.id, with_intro, with_choices)); self._done(on_done)
     def say_choice(self, q, slot, on_done=None): self._done(on_done)
     def say_correct_answer(self, q, on_done=None): self._done(on_done)
     def say_score(self, b, w, on_done=None): self._done(on_done)
@@ -230,6 +232,19 @@ def main():
     check("E: white endcap lit for the steal", bool(sipo.last & (1 << WHITE_BUZZ)))
     press(WHITE[0])                            # white arms a choice
     check("E: arming leaves only the chosen laser lit", sipo.last == (1 << WHITE[0]))
+
+    # === Scenario F: initial read-out includes choices; steal re-read doesn't ===
+    triv, voice = launch([Q("f1", 0)], match_length=1)
+    press(BLACK_BUZZ); press(WHITE_BUZZ)       # -> ASKING q1
+    check("F: initial question read-out includes the choices (with intro)",
+          voice.questions[-1] == ("f1", True, True))
+    press(BLACK_BUZZ)                          # black buzzes in first
+    press(BLACK[1]); press(BLACK[1])           # locks a wrong slot -> miss -> steal
+    check("F: black missed (-1) and white now steals",
+          triv.score["black"] == -1 and triv.current_team == "white"
+          and triv.current_stakes == "steal")
+    check("F: steal re-read is the question only (no choices, no intro)",
+          voice.questions[-1] == ("f1", False, False))
 
     print()
     if all(passed):

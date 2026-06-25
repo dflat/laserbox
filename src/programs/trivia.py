@@ -10,14 +10,16 @@ wins):
 
 * **Ready** -- "both teams buzz to begin"; each buzz lights that endcap. Once both
   are in, the match starts.
-* **Asking** -- the question is read aloud; buzzing is live from the first word. A
-  buzz **cuts the question audio instantly** (see :class:`..trivia_voice._VoSequencer`)
-  and hands that team the answer.
+* **Asking** -- the question and its four labelled choices ("A: ...", "B: ...")
+  are read aloud; buzzing is live from the first word. A buzz **cuts the audio
+  instantly** (see :class:`..trivia_voice._VoSequencer`) and hands that team the
+  answer.
 * **Answering** -- the buzzing team's four choice buttons go live. Pressing one
   speaks + arms that choice; pressing it **again** locks it in; a different button
   re-arms. A lock-in timeout counts as a miss.
 * **Resolve** -- correct: cheer + laser dance; wrong: buzzer + flash. A first-buzz
-  miss hands a **steal** to the other team (full question re-read) at lower stakes.
+  miss hands a **steal** to the other team (question re-read, but not the choices)
+  at lower stakes.
 * **Score** -- the running score is read aloud after every question.
 
 Scoring (negatives allowed): first buzz +2 / -1; steal +1 / 0. A tie after the
@@ -230,7 +232,9 @@ class Trivia(Program):
         self.first_team = None
         self.armed_slot = None
         self._all_off()
-        self.voice.say_question(self.question, self._ordinal(),
+        # read the question AND all four labelled choices ("A: ...", "B: ...");
+        # a buzz cuts the whole sequence instantly (see _asking_buzz).
+        self.voice.say_question(self.question, self._ordinal(), with_choices=True,
                                 on_done=self._question_fully_read)
 
     def _question_fully_read(self):
