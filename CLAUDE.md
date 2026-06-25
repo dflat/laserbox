@@ -64,9 +64,16 @@ The box runs on a Raspberry Pi (hostname `rzero`, user `pi`, passwordless sudo).
   ```
 - **Deploy after merging to `main`:**
   ```bash
-  cd ~/electronics/laserbox && git pull && git lfs pull   # desktop must be ON for LFS
+  cd ~/electronics/laserbox && git pull   # desktop must be ON for LFS
   XDG_RUNTIME_DIR=/run/user/1000 systemctl --user restart laserbox
   ```
+  `git pull` alone also fetches the LFS blobs: the Pi has a standard
+  `git lfs install` (active smudge filter + `post-merge` hook), so updated
+  `.wav`s come down as real audio, not pointers — no separate `git lfs pull`
+  needed. Because `filter.lfs.required = true`, if the desktop (Forgejo) is
+  **off** the `git pull` itself **errors out** rather than silently leaving
+  pointers, so a clean pull means the assets are present.
+
   A `git pull` updates files on disk but **does not reload the running process** —
   always restart the service to pick up new code (verify the `MainPID`/start time
   actually changed).
