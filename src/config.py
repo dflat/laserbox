@@ -165,7 +165,14 @@ class config:
         YOU_SCORED = "whack/you_scored.wav"          # 1-player: "You scored" + N
         PLAYER_1_SCORED = "whack/player_1_scored.wav"  # 2-player: "Player one scored" + N
         PLAYER_2_SCORED = "whack/player_2_scored.wav"  # 2-player: "Player two scored" + M
-        NUM_DIR = "whack/num"                        # num/<0..19>.wav + num/<20..90>.wav
+        # num/<0..19>.wav + tens num/<20..90>.wav + hundreds num/100.wav,200.wav,
+        # composed by _number_clips up to 299 (e.g. 247 = 200 + 40 + 7).
+        NUM_DIR = "whack/num"
+        # Miss readout, appended after each score: zero misses speaks PERFECT_GAME;
+        # otherwise the count then MISS_WORD (1) / MISSES_WORD (2+).
+        PERFECT_GAME = "whack/perfect_game.wav"
+        MISS_WORD = "whack/miss.wav"
+        MISSES_WORD = "whack/misses.wav"
         # Shared assets that already exist in the repo.
         CONGRATS = "positive/congrats_extended.wav"
         FALLBACK_PATCH = "kicks_ascending_mono"  # pitched bonk if mole-hit.wav absent

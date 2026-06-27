@@ -39,18 +39,24 @@ entry and is **skippable** — pressing a button to pick a mode cuts it short.
 | `you_scored.wav`                      | "You scored" (1-player score readout lead-in)  |
 | `player_1_scored.wav`                 | "Player one scored" (2-player readout lead-in) |
 | `player_2_scored.wav`                 | "Player two scored" (2-player readout lead-in) |
+| `perfect_game.wav`                    | "Perfect game!" (spoken when a player had 0 misses) |
+| `miss.wav` / `misses.wav`             | "miss" / "misses" (suffix after the miss count) |
 | `../menu/whack_a_mole.wav`            | "Whack a mole." (GameSelect menu announcement)|
 
-## Spoken score readout (every round)
+## Spoken score + miss readout (every round)
 
-Every round ends by speaking the score. The number is **composed** from a small
-bank in `num/` (the same idea as Trivia's score line, which sequences number
-clips): `num/0.wav … num/19.wav` plus the tens `num/20.wav, 30, …, 90`. Any value
-0-99 is one or two clips — e.g. 47 → `num/40.wav` + `num/7.wav` (see
-`WhackAMole._number_clips`). Scores are clamped to 0-99.
+Every round ends by speaking each player's **score then miss count**. The number
+is **composed** from the `num/` bank (the same idea as Trivia's score line, which
+sequences number clips): ones/teens `num/0…19.wav`, tens `num/20,30,…,90.wav`, and
+hundreds `num/100.wav`/`num/200.wav`. Any value **0-299** is up to three clips —
+e.g. 247 → `num/200` + `num/40` + `num/7` (see `WhackAMole._number_clips`); scores
+above 299 are clamped.
 
-* 1-player: `result_single` → `you_scored` → *number* → (`new_highscore` if a PB).
-* 2-player: `player_1_scored` → *N* → `player_2_scored` → *M* → winner → (`new_record`).
+A **miss** is a mole that timed out unwhacked (tracked per half). The readout says
+`perfect_game` for zero misses, otherwise the count + `miss`/`misses`.
+
+* 1-player: `result_single` → `you_scored` → *N* → *misses* → (`new_highscore` if a PB).
+* 2-player: `player_1_scored` → *N* → *misses* → `player_2_scored` → *M* → *misses* → winner → (`new_record`).
 
 ## Score tracker
 

@@ -80,6 +80,9 @@ class WhackAMole(Program):
         self.player_1_scored = cfg.PLAYER_1_SCORED
         self.player_2_scored = cfg.PLAYER_2_SCORED
         self.num_dir = cfg.NUM_DIR
+        self.perfect_game = cfg.PERFECT_GAME
+        self.miss_word = cfg.MISS_WORD
+        self.misses_word = cfg.MISSES_WORD
         self.congrats = cfg.CONGRATS
         self.fallback_patch = cfg.FALLBACK_PATCH
         self.music = cfg.MUSIC
@@ -99,11 +102,12 @@ class WhackAMole(Program):
         self._safe_load_effect(self.mole_hit, volume=0.9)
         for name in (self.welcome, self.result_single, self.p1_wins, self.p2_wins,
                      self.tie, self.new_highscore, self.new_record_vo,
-                     self.you_scored, self.player_1_scored, self.player_2_scored):
+                     self.you_scored, self.player_1_scored, self.player_2_scored,
+                     self.perfect_game, self.miss_word, self.misses_word):
             self._safe_load_effect(name)
-        # Number bank for the spoken score: ones/teens 0-19 + tens 20..90, from
-        # which any 0-99 is composed (see _number_clips), à la Trivia's score line.
-        for value in list(range(20)) + [20, 30, 40, 50, 60, 70, 80, 90]:
+        # Number bank for the spoken score: ones/teens 0-19 + tens 20..90 + hundreds
+        # 100/200, from which any 0-299 is composed (see _number_clips).
+        for value in list(range(20)) + [20, 30, 40, 50, 60, 70, 80, 90, 100, 200]:
             self._safe_load_effect(self._num_clip(value))
         self._safe_load_effect(self.congrats, volume=config.CONGRATS_VOL)
         self._congrats_dur = (self.game.mixer.effects[self.congrats].get_length()
@@ -119,6 +123,7 @@ class WhackAMole(Program):
         self.mode = None                # 'single' | 'multi'
         self.sides = []                 # [(name, ports), ...]; set when mode is picked
         self.score = {}                 # side name -> hits
+        self.misses = {}                # side name -> moles that timed out unwhacked
         self.spawn_count = {}           # side name -> total moles spawned (for balance)
         self.moles = {}                 # port -> remaining lifetime (ms)
         self._clock_ms = 0.0            # free-running clock for blink/prompt phases
@@ -195,6 +200,7 @@ class WhackAMole(Program):
     def _begin_play(self):
         """Start the timed round: reset scores, prime the board, schedule the buzzer."""
         self.score = {name: 0 for name, _ in self.sides}
+        self.misses = {name: 0 for name, _ in self.sides}
         self.spawn_count = {name: 0 for name, _ in self.sides}
         self.moles = {}
         self._elapsed_ms = 0.0
@@ -211,6 +217,7 @@ class WhackAMole(Program):
             self.moles[port] -= dt
             if self.moles[port] <= 0:
                 del self.moles[port]
+                self.misses[self._side_of(port)] += 1   # timed out unwhacked = a miss
 
     def _spawn(self, dt):
         """Spawn moles on the ramping cadence (faster as the round progresses)."""
@@ -296,12 +303,15 @@ class WhackAMole(Program):
             score = self.score["left"]
             lines.append(self.result_single)
             lines.append(self.you_scored); lines += self._number_clips(score)
+            lines += self._misses_clips(self.misses["left"])   # score + misses (or "perfect game")
             if self._record_broken("solo_best", score):
                 lines.append(self.new_highscore)
         else:
             left, right = self.score["left"], self.score["right"]
             lines.append(self.player_1_scored); lines += self._number_clips(left)
+            lines += self._misses_clips(self.misses["left"])
             lines.append(self.player_2_scored); lines += self._number_clips(right)
+            lines += self._misses_clips(self.misses["right"])
             if left > right:
                 self._winner = "left"; lines.append(self.p1_wins)
             elif right > left:
@@ -386,12 +396,23 @@ class WhackAMole(Program):
         return f"{self.num_dir}/{value}.wav"
 
     def _number_clips(self, n):
-        """Clip name(s) voicing the integer ``n`` (clamped to 0-99), Trivia-style.
+        """Clip name(s) voicing the integer ``n`` (clamped to 0-299), Trivia-style.
 
-        Composed from the number bank: 0-19 are one clip; 20-99 are the tens word
-        plus (unless a round ten) the ones word, e.g. 47 -> ["…/40.wav", "…/7.wav"].
+        Composed from the number bank: a hundreds word (100/200) when present, then
+        the 0-99 remainder as a tens word plus (unless a round ten) the ones word,
+        e.g. 247 -> ["…/200.wav", "…/40.wav", "…/7.wav"]; 200 -> ["…/200.wav"].
         """
-        n = max(0, min(99, int(n)))
+        n = max(0, min(299, int(n)))
+        hundreds, rem = divmod(n, 100)
+        clips = []
+        if hundreds:
+            clips.append(self._num_clip(hundreds * 100))  # 100 or 200
+        if rem or not hundreds:                            # ...05 -> skip; 0 -> "zero"
+            clips += self._tens_ones_clips(rem)
+        return clips
+
+    def _tens_ones_clips(self, n):
+        """Clip name(s) for ``n`` in 0-99 (one clip under 20, else tens + ones)."""
         if n < 20:
             return [self._num_clip(n)]
         tens, ones = (n // 10) * 10, n % 10
@@ -399,6 +420,12 @@ class WhackAMole(Program):
         if ones:
             clips.append(self._num_clip(ones))
         return clips
+
+    def _misses_clips(self, m):
+        """Clip name(s) for the miss readout: 'perfect game', or count + miss(es)."""
+        if m == 0:
+            return [self.perfect_game]
+        return self._number_clips(m) + [self.miss_word if m == 1 else self.misses_word]
 
     def _load_scores(self):
         """Read the saved records into ``self.scores``; default to zeros if absent.

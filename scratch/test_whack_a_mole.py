@@ -84,16 +84,31 @@ def main():
     p0 = prog()
     check("score lead-ins loaded",
           all(n in fx for n in (p0.you_scored, p0.player_1_scored, p0.player_2_scored)))
-    check("number bank loaded (0, 7, 90)",
-          all(f"whack/num/{v}.wav" in fx for v in (0, 7, 19, 20, 90, 9)))
+    check("number bank loaded (incl. hundreds)",
+          all(f"whack/num/{v}.wav" in fx for v in (0, 7, 19, 20, 90, 9, 100, 200)))
     check("single-digit -> one clip", p0._number_clips(7) == ["whack/num/7.wav"])
     check("teen -> one clip", p0._number_clips(19) == ["whack/num/19.wav"])
     check("round ten -> one clip", p0._number_clips(50) == ["whack/num/50.wav"])
     check("compound -> tens + ones",
           p0._number_clips(47) == ["whack/num/40.wav", "whack/num/7.wav"])
     check("99 composes", p0._number_clips(99) == ["whack/num/90.wav", "whack/num/9.wav"])
-    check("clamps above 99", p0._number_clips(150) == ["whack/num/90.wav", "whack/num/9.wav"])
     check("zero speaks", p0._number_clips(0) == ["whack/num/0.wav"])
+    # hundreds place
+    check("100 -> one clip", p0._number_clips(100) == ["whack/num/100.wav"])
+    check("147 -> hundreds + tens + ones",
+          p0._number_clips(147) == ["whack/num/100.wav", "whack/num/40.wav", "whack/num/7.wav"])
+    check("200 -> one clip", p0._number_clips(200) == ["whack/num/200.wav"])
+    check("215 -> hundreds + teen", p0._number_clips(215) == ["whack/num/200.wav", "whack/num/15.wav"])
+    check("clamps above 299",
+          p0._number_clips(350) == ["whack/num/200.wav", "whack/num/90.wav", "whack/num/9.wav"])
+
+    # miss readout: 'perfect game' at zero, else count + miss/misses
+    check("miss clips loaded",
+          all(n in fx for n in (p0.perfect_game, p0.miss_word, p0.misses_word)))
+    check("zero misses -> perfect game", p0._misses_clips(0) == [p0.perfect_game])
+    check("one miss -> singular", p0._misses_clips(1) == ["whack/num/1.wav", p0.miss_word])
+    check("several misses -> plural",
+          p0._misses_clips(3) == ["whack/num/3.wav", p0.misses_word])
 
     # --- 1-player: a BLACK button (port 2) starts single mode ---
     step(1 << 2)       # press a black button
@@ -118,6 +133,7 @@ def main():
     check("left half actually spawned moles", p.spawn_count["left"] > 0)
     check("1-player runs more than one mole at a time", max_moles >= 2)
     check("1-player never exceeds SINGLE_MAX_MOLES", max_moles <= p.single_max)
+    check("unwhacked moles count as misses", p.misses["left"] > 0)
 
     # whack a live mole -> score increments, that mole clears
     target = next(iter(p.moles))
@@ -142,6 +158,8 @@ def main():
     check("both halves spawned moles", left_spawns > 0 and right_spawns > 0)
     check(f"halves stay balanced (L={left_spawns}, R={right_spawns}, diff<=1)",
           abs(left_spawns - right_spawns) <= 1)
+    check("2-player tracks misses per half",
+          p.misses["left"] > 0 and p.misses["right"] > 0)
 
     # --- winner resolution + the bay clears at the buzzer ---
     # player 1 (left) ahead
