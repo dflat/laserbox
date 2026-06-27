@@ -127,7 +127,12 @@ class config:
         SPAWN_MS_END = 450
         LIFETIME_MS_START = 1500
         LIFETIME_MS_END = 750
-        MAX_PER_SIDE = 3  # cap on simultaneous moles per half
+        MAX_PER_SIDE = 3  # cap on simultaneous moles per half (2-player)
+        # 1-player tops the board up to a freshly rolled target in this range each
+        # spawn tick, so the number of moles on screen *varies* (2-player uses the
+        # balanced one-per-tick spawn capped by MAX_PER_SIDE and is unaffected).
+        SINGLE_MIN_MOLES = 1
+        SINGLE_MAX_MOLES = 3
 
         # Telegraph: blink a mole during the final WARN_MS of its life so a binary
         # laser can still signal "about to vanish".

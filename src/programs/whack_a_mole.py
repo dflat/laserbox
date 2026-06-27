@@ -60,6 +60,8 @@ class WhackAMole(Program):
         self.lifetime_ms_start = cfg.LIFETIME_MS_START
         self.lifetime_ms_end = cfg.LIFETIME_MS_END
         self.max_per_side = cfg.MAX_PER_SIDE
+        self.single_min = cfg.SINGLE_MIN_MOLES
+        self.single_max = cfg.SINGLE_MAX_MOLES
         self.warn_ms = cfg.WARN_MS
         self.blink_half_ms = cfg.BLINK_HALF_MS
         self.prompt_half_ms = cfg.PROMPT_HALF_MS
@@ -191,7 +193,7 @@ class WhackAMole(Program):
 
     # -- round flow ---------------------------------------------------------
     def _begin_play(self):
-        """Start the timed round: reset scores, prime a mole, schedule the buzzer."""
+        """Start the timed round: reset scores, prime the board, schedule the buzzer."""
         self.score = {name: 0 for name, _ in self.sides}
         self.spawn_count = {name: 0 for name, _ in self.sides}
         self.moles = {}
@@ -199,8 +201,8 @@ class WhackAMole(Program):
         self._spawn_accum = 0.0
         self.phase = self.PLAY
         self._safe_load_music(self.music)
-        for _ in self.sides:           # prime one mole per half so play starts at once
-            self._try_spawn()
+        for _ in self.sides:           # prime the board so play starts at once
+            self._spawn_tick()         # 1-player fills to a random 1..3; 2-player one/half
         self.after(self.round_ms, self._end_round)
 
     def _age_moles(self, dt):
@@ -216,7 +218,7 @@ class WhackAMole(Program):
         interval = self._spawn_interval()
         while self._spawn_accum >= interval:
             self._spawn_accum -= interval
-            self._try_spawn()
+            self._spawn_tick()
             interval = self._spawn_interval()  # the ramp may have moved it
 
     def _spawn_interval(self):
@@ -235,22 +237,48 @@ class WhackAMole(Program):
         return _lerp(self._elapsed_ms / self.round_ms,
                      self.lifetime_ms_start, self.lifetime_ms_end)
 
+    def _spawn_tick(self):
+        """One spawn event: 1-player tops up to a random 1..3, 2-player adds one."""
+        if self.mode == "single":
+            self._spawn_single()
+        else:
+            self._try_spawn()
+
+    def _spawn_single(self):
+        """(1-player) Top the board up to a freshly rolled target of moles.
+
+        Re-rolling a target in ``SINGLE_MIN_MOLES..SINGLE_MAX_MOLES`` each tick
+        (rather than spawning one at a time) makes the number of simultaneous moles
+        *vary* between those bounds instead of sitting at one.
+        """
+        name, ports = self.sides[0]
+        target = random.randint(self.single_min, self.single_max)
+        while sum(1 for p in ports if p in self.moles) < target:
+            if not self._spawn_one(name, ports):
+                break  # no free ports left on the half
+
     def _try_spawn(self):
-        """Pop a mole on the half with the fewest spawns so far, keeping halves even.
+        """(2-player) Pop one mole on the half with the fewest spawns so far.
 
         Always feeds the half that is "behind" on spawn count; if that half is full
         (``MAX_PER_SIDE`` moles already up) the spawn is skipped rather than handed
         to the other half, so the running counts stay balanced for fair scoring.
         """
         name, ports = min(self.sides, key=lambda s: self.spawn_count[s[0]])
+        occupied = sum(1 for p in ports if p in self.moles)
+        if occupied < self.max_per_side:
+            self._spawn_one(name, ports)
+
+    def _spawn_one(self, name, ports):
+        """Light a mole on a random free port of half ``name``; True if one was placed."""
         free = [p for p in ports if p not in self.moles]
-        occupied = len(ports) - len(free)
-        if not free or occupied >= self.max_per_side:
-            return
+        if not free:
+            return False
         port = random.choice(free)
         self.moles[port] = self._current_lifetime_ms()
         self.spawn_count[name] += 1
         self._safe_play_effect(self.popup)
+        return True
 
     def _end_round(self):
         """Buzzer: clear the bay, announce the result (+ any record), dance, then quit."""
