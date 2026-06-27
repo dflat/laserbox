@@ -106,6 +106,57 @@ class config:
         MISS_SOUND = "catch/miss.wav"
         WIN_SOUND = "positive/congrats_extended.wav"  # Golf-style big celebration
 
+    class WhackAMole:
+        """Settings for :class:`~src.programs.whack_a_mole.WhackAMole`."""
+
+        ROUND_MS = 60000  # length of a timed round
+
+        # Port layout: two halves. 1-player uses LEFT only; 2-player uses both,
+        # LEFT = player 1 ("black" keys), RIGHT = player 2 ("white" keys). The box
+        # can't tell who presses, so sides are socially enforced; spawns alternate
+        # to whichever half is "behind" so both get an equal mole count.
+        LEFT_PORTS = (0, 1, 2, 3, 4, 5, 6)
+        RIGHT_PORTS = (7, 8, 9, 10, 11, 12, 13)
+
+        # Difficulty ramp over the round (linear from *_START at the whistle to
+        # *_END at the buzzer). SPAWN_MS is the *per-half* gap between moles -- with
+        # both halves in play the box spawns twice as often (alternating sides) so
+        # each half sees the same rate as 1-player. LIFETIME_MS is how long a mole
+        # stays lit before it times out as a miss.
+        SPAWN_MS_START = 1100
+        SPAWN_MS_END = 450
+        LIFETIME_MS_START = 1500
+        LIFETIME_MS_END = 750
+        MAX_PER_SIDE = 3  # cap on simultaneous moles per half
+
+        # Telegraph: blink a mole during the final WARN_MS of its life so a binary
+        # laser can still signal "about to vanish".
+        WARN_MS = 320
+        BLINK_HALF_MS = 80
+
+        # READY prompt: alternately light the black/white halves this long each, to
+        # invite "press a black button (1P) / white button (2P)" while the spoken
+        # prompt plays.
+        PROMPT_HALF_MS = 650
+
+        # --- audio (paths under assets/sounds/effects) ---
+        # Fixed clips (22050 Hz / mono / 16-bit): HAMMER plays on every press (the
+        # mallet swing), MOLE_HIT only on a successful whack, POPUP on each spawn.
+        POPUP = "whack/popup/pop-up.wav"
+        HAMMER = "whack/hits/hammer.wav"
+        MOLE_HIT = "whack/hits/mole-hit.wav"
+        # Spoken stubs -- skipped cleanly if the wav is not present yet (see the
+        # README in assets/sounds/effects/whack/ for the lines to record).
+        WELCOME = "whack/welcome.wav"            # "black button for one player..."
+        RESULT_SINGLE = "whack/result_single.wav"
+        P1_WINS = "whack/player_1_wins.wav"
+        P2_WINS = "whack/player_2_wins.wav"
+        TIE = "whack/tie.wav"
+        # Shared assets that already exist in the repo.
+        CONGRATS = "positive/congrats_extended.wav"
+        FALLBACK_PATCH = "kicks_ascending_mono"  # pitched bonk if mole-hit.wav absent
+        MUSIC = "Golf2Slow.wav"                  # looping backing track (optional)
+
     class GameSelect:
         """Settings for :class:`~src.programs.game_select.GameSelect`."""
 
@@ -132,6 +183,7 @@ class config:
             5: ("SimonSays", "simon_says.wav"),
             6: ("Trivia", "trivia.wav"),
             7: ("Catch", "catch.wav"),
+            8: ("WhackAMole", "whack_a_mole.wav"),
         }
 
         # --- system power actions (last two physical buttons) ---
