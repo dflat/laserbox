@@ -106,11 +106,18 @@ def main():
     check("single-mode moles only on left half (0-6)",
           all(port in p.left_ports for port in p.moles))
 
-    # run a while so spawns/expiries cycle; moles must stay on the left half
-    step(0, frames=120)
-    check("after play, still only left-half moles",
-          all(port in p.left_ports for port in p.moles))
+    # run a while so spawns/expiries cycle; moles must stay on the left half, and
+    # the count must *vary* between 1 and SINGLE_MAX_MOLES (no longer stuck at one)
+    max_moles = len(p.moles)
+    only_left = True
+    for _ in range(400):
+        step(0)
+        max_moles = max(max_moles, len(p.moles))
+        only_left = only_left and all(port in p.left_ports for port in p.moles)
+    check("after play, still only left-half moles", only_left)
     check("left half actually spawned moles", p.spawn_count["left"] > 0)
+    check("1-player runs more than one mole at a time", max_moles >= 2)
+    check("1-player never exceeds SINGLE_MAX_MOLES", max_moles <= p.single_max)
 
     # whack a live mole -> score increments, that mole clears
     target = next(iter(p.moles))
