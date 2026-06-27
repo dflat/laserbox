@@ -20,6 +20,8 @@ The intro prompt is skippable, exactly like SimonSays' welcome: making a selecti
 before the spoken prompt finishes starts the round immediately. Reachable from the
 operator menu (GameSelect slot 8) or via ``python -m src -s -p WhackAMole``.
 """
+import json
+import os
 import random
 
 from .base import *
@@ -40,9 +42,7 @@ class WhackAMole(Program):
     # Phase names (also referenced by the headless test).
     READY = "READY"     # intro prompt; waiting for a black/white button to pick mode
     PLAY = "PLAY"       # moles spawning; the timed round
-    RESULT = "RESULT"   # round over: winner display + celebration, then quit
-
-    ALL_WORD = (1 << 14) - 1  # every laser on (tie display)
+    RESULT = "RESULT"   # round over: cleared bay, result voice, k-dance, then quit
 
     def __init__(self):
         # Registers this singleton; static data only (self.game does not exist yet).
@@ -72,9 +72,20 @@ class WhackAMole(Program):
         self.p1_wins = cfg.P1_WINS
         self.p2_wins = cfg.P2_WINS
         self.tie = cfg.TIE
+        self.new_highscore = cfg.NEW_HIGHSCORE
+        self.new_record_vo = cfg.NEW_RECORD
+        self.you_scored = cfg.YOU_SCORED
+        self.player_1_scored = cfg.PLAYER_1_SCORED
+        self.player_2_scored = cfg.PLAYER_2_SCORED
+        self.num_dir = cfg.NUM_DIR
         self.congrats = cfg.CONGRATS
         self.fallback_patch = cfg.FALLBACK_PATCH
         self.music = cfg.MUSIC
+
+        # Persistent score tracker: solo personal best + 2-player all-time best.
+        self.highscore_path = (cfg.HIGHSCORE_PATH if os.path.isabs(cfg.HIGHSCORE_PATH)
+                               else os.path.join(config.PROJECT_ROOT, cfg.HIGHSCORE_PATH))
+        self._load_scores()
 
         # Sound effects, loaded in start() (not __init__) so the Sounds are valid
         # against the current mixer, which other programs may have re-initialised.
@@ -84,9 +95,14 @@ class WhackAMole(Program):
         self._safe_load_effect(self.popup, volume=0.6)
         self._safe_load_effect(self.hammer, volume=0.7)
         self._safe_load_effect(self.mole_hit, volume=0.9)
-        for name in (self.welcome, self.result_single, self.p1_wins,
-                     self.p2_wins, self.tie):
+        for name in (self.welcome, self.result_single, self.p1_wins, self.p2_wins,
+                     self.tie, self.new_highscore, self.new_record_vo,
+                     self.you_scored, self.player_1_scored, self.player_2_scored):
             self._safe_load_effect(name)
+        # Number bank for the spoken score: ones/teens 0-19 + tens 20..90, from
+        # which any 0-99 is composed (see _number_clips), à la Trivia's score line.
+        for value in list(range(20)) + [20, 30, 40, 50, 60, 70, 80, 90]:
+            self._safe_load_effect(self._num_clip(value))
         self._safe_load_effect(self.congrats, volume=config.CONGRATS_VOL)
         self._congrats_dur = (self.game.mixer.effects[self.congrats].get_length()
                               if self.congrats in self.game.mixer.effects else 3.0)
@@ -106,8 +122,8 @@ class WhackAMole(Program):
         self._clock_ms = 0.0            # free-running clock for blink/prompt phases
         self._elapsed_ms = 0.0          # time into the current round
         self._spawn_accum = 0.0         # accumulator that triggers spawns
-        self._result_word = None        # winner laser word held during RESULT (multi)
-        self._dance_pending = False     # whether RESULT should run random_k_dance (single)
+        self._winner = None             # 'left' | 'right' | 'tie' set at RESULT (multi)
+        self._broke_record = False      # set in RESULT when a saved record is beaten
 
         self.game.lasers.set_word(0)
         self._safe_play_effect(self.welcome)  # spoken prompt; a press skips it
@@ -237,50 +253,77 @@ class WhackAMole(Program):
         self._safe_play_effect(self.popup)
 
     def _end_round(self):
-        """Buzzer: stop play, announce the result, celebrate, then quit."""
+        """Buzzer: clear the bay, announce the result (+ any record), dance, then quit."""
         self.phase = self.RESULT
         self.moles = {}
+        self.game.lasers.set_word(0)   # clear the laser bay the moment the round ends
         self.game.mixer.fade_music(1500)
-        self._result_word = None
+        self._broke_record = False
+        self._winner = None            # 'left' | 'right' | 'tie' (None in 1-player)
 
+        # ``lines`` are the spoken clips played back-to-back before the jingle:
+        # the result, the spoken score readout, then a record fanfare if beaten.
+        lines = []
         if self.mode == "single":
-            vo = self.result_single
-            self._dance_pending = True
+            score = self.score["left"]
+            lines.append(self.result_single)
+            lines.append(self.you_scored); lines += self._number_clips(score)
+            if self._record_broken("solo_best", score):
+                lines.append(self.new_highscore)
         else:
             left, right = self.score["left"], self.score["right"]
+            lines.append(self.player_1_scored); lines += self._number_clips(left)
+            lines.append(self.player_2_scored); lines += self._number_clips(right)
             if left > right:
-                vo, self._result_word = self.p1_wins, self._word(self.left_ports)
+                self._winner = "left"; lines.append(self.p1_wins)
             elif right > left:
-                vo, self._result_word = self.p2_wins, self._word(self.right_ports)
+                self._winner = "right"; lines.append(self.p2_wins)
             else:
-                vo, self._result_word = self.tie, self.ALL_WORD
-            self._dance_pending = False
+                self._winner = "tie"; lines.append(self.tie)
+            if self._record_broken("versus_best", max(left, right)):
+                lines.append(self.new_record_vo)
 
-        # Speak the result first (if recorded), then fire the celebration so the
-        # jingle does not talk over the announcement.
+        # Speak the lines in order (skipping any unrecorded), then fire the
+        # celebration so the jingle never talks over an announcement.
         delay = 0
-        if vo in self.game.mixer.effects:
-            self._safe_play_effect(vo)
-            delay = int(self.game.mixer.effects[vo].get_length() * 1000) + 150
+        for name in lines:
+            if name in self.game.mixer.effects:
+                self.after(delay, self._safe_play_effect, name)
+                delay += int(self.game.mixer.effects[name].get_length() * 1000) + 150
         self.after(delay, self._celebrate)
         self.after(delay + int(self._congrats_dur * 1000) + 400, self.quit)
 
+    def _record_broken(self, key, value):
+        """Update + persist saved record ``key`` if ``value`` beats it; return True if so.
+
+        ``key`` is ``solo_best`` (1-player personal best) or ``versus_best`` (the
+        highest single-side score in a 2-player round). A score of zero never sets
+        a record, so an empty round can't "win" the board.
+        """
+        if value <= 0 or value <= self.scores.get(key, 0):
+            return False
+        self.scores[key] = value
+        self._broke_record = True
+        self._save_scores()
+        return True
+
     def _celebrate(self):
-        """Play the shared celebration; in 1-player also run the laser dance."""
-        if self._dance_pending:
-            random_k_dance(k=3, fps=8, dur=max(0.0, self._congrats_dur - 1.2)).start()
+        """Flash a celebratory k-dance (bigger on a new record) under the jingle.
+
+        Used for both modes -- the winner is conveyed by the spoken result line, so
+        the dance can own the laser bay in 2-player too.
+        """
+        k = 4 if self._broke_record else 3
+        random_k_dance(k=k, fps=8, dur=max(0.0, self._congrats_dur - 1.2)).start()
         self._safe_play_effect(self.congrats)
 
     # -- rendering ----------------------------------------------------------
     def _render(self):
-        """Drive the lasers for the current phase."""
+        """Drive the lasers for the current phase (RESULT is owned by the k-dance)."""
         if self.phase == self.READY:
             self._render_prompt()
         elif self.phase == self.PLAY:
             self._render_moles()
-        elif self.phase == self.RESULT and self._result_word is not None:
-            self._render_result()
-        # In RESULT with no winner word (single-player) random_k_dance owns the lasers.
 
     def _render_prompt(self):
         """Alternately light the black and white halves to invite a mode choice."""
@@ -298,11 +341,6 @@ class WhackAMole(Program):
             word |= 1 << port
         self.game.lasers.set_word(word)
 
-    def _render_result(self):
-        """Blink the winning half (or the whole row on a tie) during the celebration."""
-        on = int(self._clock_ms // 250) % 2 == 0
-        self.game.lasers.set_word(self._result_word if on else 0)
-
     # -- helpers ------------------------------------------------------------
     def _side_of(self, port):
         """Return the half name ('left'/'right') that owns ``port``."""
@@ -314,6 +352,49 @@ class WhackAMole(Program):
         for p in ports:
             word |= 1 << p
         return word
+
+    def _num_clip(self, value):
+        """Effect path for the single number word ``value`` (0-19 or a ten 20-90)."""
+        return f"{self.num_dir}/{value}.wav"
+
+    def _number_clips(self, n):
+        """Clip name(s) voicing the integer ``n`` (clamped to 0-99), Trivia-style.
+
+        Composed from the number bank: 0-19 are one clip; 20-99 are the tens word
+        plus (unless a round ten) the ones word, e.g. 47 -> ["…/40.wav", "…/7.wav"].
+        """
+        n = max(0, min(99, int(n)))
+        if n < 20:
+            return [self._num_clip(n)]
+        tens, ones = (n // 10) * 10, n % 10
+        clips = [self._num_clip(tens)]
+        if ones:
+            clips.append(self._num_clip(ones))
+        return clips
+
+    def _load_scores(self):
+        """Read the saved records into ``self.scores``; default to zeros if absent.
+
+        Tolerant of a missing/corrupt file: any read error just starts fresh, so a
+        first run (or a wiped board) simply has no records yet.
+        """
+        self.scores = {"solo_best": 0, "versus_best": 0}
+        try:
+            with open(self.highscore_path) as f:
+                data = json.load(f)
+            for key in self.scores:
+                self.scores[key] = int(data.get(key, 0))
+        except (OSError, ValueError, TypeError):
+            pass
+
+    def _save_scores(self):
+        """Persist ``self.scores`` to the highscore file (best effort)."""
+        try:
+            os.makedirs(os.path.dirname(self.highscore_path), exist_ok=True)
+            with open(self.highscore_path, "w") as f:
+                json.dump(self.scores, f)
+        except OSError as e:
+            print(f"[WhackAMole] could not save scores: {e}")
 
     def _safe_load_effect(self, name, volume=1.0):
         """Load an effect, returning False (not raising) if the file is absent."""
@@ -336,7 +417,7 @@ class WhackAMole(Program):
         """Start a looping backing track if present; quietly skip if it is missing."""
         try:
             self.game.mixer.load_music(name, loops=-1)
-            self.game.mixer.set_music_volume(0.5)
+            self.game.mixer.set_music_volume(0.75)
         except Exception as e:
             print(f"[WhackAMole] backing music unavailable: {e}")
 
