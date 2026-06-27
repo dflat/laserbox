@@ -9,4 +9,5 @@ from .golf import Golf
 from .toggle_pattern import TogglePattern
 from .simon_says import SimonSays
 from .catch import Catch
+from .whack_a_mole import WhackAMole
 from .example_program import ExampleProgram

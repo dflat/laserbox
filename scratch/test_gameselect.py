@@ -97,9 +97,9 @@ def main():
     game.state_machine.program.quit()   # natural finish of a one-item context
     check("single-program finish -> GameSelect", prog() == "GameSelect")
 
-    # 7. unassigned button is a no-op (buttons 7-11 are unassigned)
+    # 7. unassigned button is a no-op (buttons 9-11 are unassigned)
     step(0)
-    step(1 << 8)
+    step(1 << 9)
     check("unassigned button -> no arm", game.state_machine.program.armed is None)
     check("unassigned button -> still GameSelect", prog() == "GameSelect")
 
@@ -127,7 +127,7 @@ def main():
     step(1 << 12)      # arm reboot again
     check("re-armed btn12", gs.armed == 12)
     step(0)
-    step(1 << 8)       # unassigned -> cancels, nothing re-armed
+    step(1 << 9)       # unassigned -> cancels, nothing re-armed
     check("unassigned button cancels power arm", gs.armed is None)
     check("unassigned cancel leaves lasers off", game.lasers.to_word() == 0)
     check("not committed after unassigned cancel", gs.power_committed is False)
