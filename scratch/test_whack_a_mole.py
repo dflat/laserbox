@@ -7,8 +7,10 @@ half-balance, and winner resolution. Run from repo root:
 
     SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy python scratch/test_whack_a_mole.py
 """
+import json
 import os
 import sys
+import tempfile
 
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -19,6 +21,11 @@ from src.game_loop import Game
 from src.audio_utils import Mixer
 from src.event_loop import events
 from src.config import config
+
+# Point the persistent high-score file at a throwaway temp path so the test is
+# hermetic (never touches a real box's records).
+_HS = os.path.join(tempfile.mkdtemp(prefix="whack_hs_"), "whack_a_mole.json")
+config.WhackAMole.HIGHSCORE_PATH = _HS
 
 
 class ScriptedPISO:
@@ -68,6 +75,25 @@ def main():
     check("hammer clip loaded", prog().hammer in fx)
     check("mole-hit clip loaded", prog().mole_hit in fx)
     check("pop-up clip loaded", prog().popup in fx)
+    check("new-highscore clip loaded", prog().new_highscore in fx)
+    check("new-record clip loaded", prog().new_record_vo in fx)
+    check("starts with a fresh (zeroed) score board",
+          prog().scores == {"solo_best": 0, "versus_best": 0})
+
+    # spoken score readout (0-99 composed from the number bank, Trivia-style)
+    p0 = prog()
+    check("score lead-ins loaded",
+          all(n in fx for n in (p0.you_scored, p0.player_1_scored, p0.player_2_scored)))
+    check("number bank loaded (0, 7, 90)",
+          all(f"whack/num/{v}.wav" in fx for v in (0, 7, 19, 20, 90, 9)))
+    check("single-digit -> one clip", p0._number_clips(7) == ["whack/num/7.wav"])
+    check("teen -> one clip", p0._number_clips(19) == ["whack/num/19.wav"])
+    check("round ten -> one clip", p0._number_clips(50) == ["whack/num/50.wav"])
+    check("compound -> tens + ones",
+          p0._number_clips(47) == ["whack/num/40.wav", "whack/num/7.wav"])
+    check("99 composes", p0._number_clips(99) == ["whack/num/90.wav", "whack/num/9.wav"])
+    check("clamps above 99", p0._number_clips(150) == ["whack/num/90.wav", "whack/num/9.wav"])
+    check("zero speaks", p0._number_clips(0) == ["whack/num/0.wav"])
 
     # --- 1-player: a BLACK button (port 2) starts single mode ---
     step(1 << 2)       # press a black button
@@ -110,10 +136,7 @@ def main():
     check(f"halves stay balanced (L={left_spawns}, R={right_spawns}, diff<=1)",
           abs(left_spawns - right_spawns) <= 1)
 
-    # --- winner resolution (drive scores directly, then ring the buzzer) ---
-    def winner_word(p):
-        return p._result_word
-
+    # --- winner resolution + the bay clears at the buzzer ---
     # player 1 (left) ahead
     game.state_machine.launch_single_program("WhackAMole")
     p = prog()
@@ -122,8 +145,8 @@ def main():
     p._congrats_dur = 0.05
     p._end_round()
     check("L>R -> RESULT", p.phase == "RESULT")
-    check("L>R -> left half is the winner display",
-          winner_word(p) == p._word(p.left_ports))
+    check("L>R -> left wins", p._winner == "left")
+    check("laser bay cleared the moment the round ends", game.lasers.to_word() == 0)
 
     # player 2 (right) ahead
     game.state_machine.launch_single_program("WhackAMole")
@@ -132,17 +155,16 @@ def main():
     p.score = {"left": 1, "right": 6}
     p._congrats_dur = 0.05
     p._end_round()
-    check("R>L -> right half is the winner display",
-          winner_word(p) == p._word(p.right_ports))
+    check("R>L -> right wins", p._winner == "right")
 
-    # tie -> whole row
+    # equal scores -> tie
     game.state_machine.launch_single_program("WhackAMole")
     p = prog()
     step(1 << 9); step(0)
     p.score = {"left": 4, "right": 4}
     p._congrats_dur = 0.05
     p._end_round()
-    check("tie -> all lasers lit", winner_word(p) == p.ALL_WORD)
+    check("equal scores -> tie", p._winner == "tie")
 
     # --- a press on an empty hole is harmless (no score, no crash) ---
     game.state_machine.launch_single_program("WhackAMole")
@@ -152,6 +174,54 @@ def main():
     empty_port = 6
     step(1 << empty_port)
     check("empty-hole press does not score", p.score["left"] == 0)
+
+    # --- score tracker: solo personal best persists + fanfares on a break ---
+    def read_scores():
+        with open(_HS) as f:
+            return json.load(f)
+
+    def wipe_board():
+        try:
+            os.remove(_HS)
+        except FileNotFoundError:
+            pass
+
+    wipe_board()                               # start from an empty board
+    game.state_machine.launch_single_program("WhackAMole")
+    p = prog()
+    step(1 << 2); step(0)                      # black -> single
+    check("fresh launch zeroes solo_best", p.scores["solo_best"] == 0)
+    p.score = {"left": 12}
+    p._congrats_dur = 0.05
+    p._end_round()
+    check("solo beats record -> solo_best updates", p.scores["solo_best"] == 12)
+    check("beating the record sets _broke_record", p._broke_record is True)
+    check("solo_best persisted to disk", read_scores().get("solo_best") == 12)
+
+    # relaunch -> the saved personal best loads back from disk
+    game.state_machine.launch_single_program("WhackAMole")
+    p = prog()
+    check("persisted solo_best loads on relaunch", p.scores["solo_best"] == 12)
+
+    # a weaker solo round does NOT lower the record and does not fanfare
+    step(1 << 2); step(0)
+    p.score = {"left": 5}
+    p._congrats_dur = 0.05
+    p._end_round()
+    check("weaker solo round keeps the record", p.scores["solo_best"] == 12)
+    check("no record broken on a weaker round", p._broke_record is False)
+
+    # --- score tracker: 2-player all-time best (versus_best) ---
+    wipe_board()
+    game.state_machine.launch_single_program("WhackAMole")
+    p = prog()
+    step(1 << 9); step(0)                      # white -> multi
+    p.score = {"left": 8, "right": 3}
+    p._congrats_dur = 0.05
+    p._end_round()
+    check("2-player best side sets versus_best", p.scores["versus_best"] == 8)
+    check("versus_best persisted to disk", read_scores().get("versus_best") == 8)
+    check("winner resolved alongside a record", p._winner == "left")
 
     print()
     if all(passed):

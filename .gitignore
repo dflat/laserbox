@@ -2,5 +2,6 @@
 **/__pycache__/
 .venv/
 stats
+state/
 docs/dev/_build/
 .DS_Store

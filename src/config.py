@@ -152,10 +152,26 @@ class config:
         P1_WINS = "whack/player_1_wins.wav"
         P2_WINS = "whack/player_2_wins.wav"
         TIE = "whack/tie.wav"
+        NEW_HIGHSCORE = "whack/new_highscore.wav"  # solo personal-best beaten
+        NEW_RECORD = "whack/new_record.wav"        # 2-player all-time best beaten
+        # Spoken end-of-round score readout. Numbers are composed from a small bank
+        # (ones/teens 0-19 + tens 20-90) under NUM_DIR, sequenced like Trivia's
+        # score line, so any value 0-99 is one or two clips.
+        YOU_SCORED = "whack/you_scored.wav"          # 1-player: "You scored" + N
+        PLAYER_1_SCORED = "whack/player_1_scored.wav"  # 2-player: "Player one scored" + N
+        PLAYER_2_SCORED = "whack/player_2_scored.wav"  # 2-player: "Player two scored" + M
+        NUM_DIR = "whack/num"                        # num/<0..19>.wav + num/<20..90>.wav
         # Shared assets that already exist in the repo.
         CONGRATS = "positive/congrats_extended.wav"
         FALLBACK_PATCH = "kicks_ascending_mono"  # pitched bonk if mole-hit.wav absent
-        MUSIC = "Golf2Slow.wav"                  # looping backing track (optional)
+        MUSIC = "banjo.wav"                      # looping backing track (optional)
+
+        # Persistent score tracker (per-box, not version-controlled). Relative
+        # paths are resolved against config.PROJECT_ROOT; an absolute path is used
+        # as-is (the headless test points this at a temp file). Holds two records:
+        # ``solo_best`` (your single-player personal best) and ``versus_best`` (the
+        # highest single-side score ever in a 2-player round).
+        HIGHSCORE_PATH = "state/whack_a_mole.json"
 
     class GameSelect:
         """Settings for :class:`~src.programs.game_select.GameSelect`."""
