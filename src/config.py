@@ -18,7 +18,15 @@ class config:
         FPS = 100
     else:
         FPS = 60
-    AUDIO_BUFFER = int(2048 / 128)  # samples
+    # Mixer buffer, in samples (must be a power of two). At 22050 Hz this is the
+    # amount of audio SDL pre-mixes per callback: too small and the callback
+    # can't be serviced in time (the OS scheduler / GIL / the 100 FPS loop steal
+    # it), starving the device -> underruns heard as crackle/pops/dropped frames.
+    # 1024 samples ~= 46 ms, the floor that stays glitch-free on the Pi Zero W's
+    # single ARMv6 core while keeping press->sound latency low. (Was briefly 16
+    # samples ~= 0.7 ms chasing latency, which is far below any audio device's
+    # period and crackled everywhere -- on the Pi and on dev machines alike.)
+    AUDIO_BUFFER = 1024  # samples
     REGISTER_DELAY = 0  # seconds (settle delay between GPIO edges)
     SIM_SCREEN_WH = 600, 480  # simulator window size, pixels
     ANTI_JITTER_DELAY = 0.001  # seconds (button-release debounce, e.g. Golf)
