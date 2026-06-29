@@ -72,6 +72,9 @@ class Catch(Program):
         self.zap_sound = cfg.ZAP_SOUND
         self.miss_sound = cfg.MISS_SOUND
         self.win_sound = cfg.WIN_SOUND
+        self.music = cfg.MUSIC
+        self.music_vol = cfg.MUSIC_VOL
+        self.music_duck_vol = cfg.MUSIC_DUCK_VOL
         # Half a blink cycle: BLINK_HZ flashes/sec => on this long, off this long.
         self.blink_half_period_ms = 1000 / (2 * cfg.BLINK_HZ)
 
@@ -82,10 +85,48 @@ class Catch(Program):
             self.game.mixer.load_effect(name)
         self.game.mixer.load_effect(self.win_sound, volume=config.CONGRATS_VOL)
 
+        self._start_music()
+
         self.level_index = 0
         intro_ms = self.game.mixer.effects[self.intro_sound].get_length() * 1000
         self.game.mixer.play_effect(self.intro_sound)
         self._begin_ready(intro_ms)
+
+    def _start_music(self):
+        """Start the looping backing track if one is configured and present.
+
+        Streamed on the music channel with ``loops=-1`` (forever); for OGG/WAV
+        this loop is gapless. Held under the spoken cues at ``config.Catch
+        .MUSIC_VOL``. A missing or unplayable file is non-fatal -- the game just
+        runs silent underneath, so the asset can be dropped in later -- and the
+        state machine's teardown stops the stream when Catch exits.
+
+        Sets ``self._music_on`` so the cue ducking is skipped when no bed is
+        actually playing.
+        """
+        self._music_on = False
+        if not self.music:
+            return
+        try:
+            self.game.mixer.load_music(self.music, loops=-1)
+            self.game.mixer.set_music_volume(self.music_vol)
+            self._music_on = True
+        except Exception as e:  # pragma: no cover - asset/codec issues only
+            print(f"[Catch] backing music unavailable: {e}")
+
+    def _play_cue(self, name):
+        """Play a spoken cue, dipping the backing music under it (a small duck).
+
+        Always plays through the effect channel; when the bed is running it also
+        rides the music down to ``config.Catch.MUSIC_DUCK_VOL`` for the length of
+        the cue and back up to ``MUSIC_VOL``, so the line stays clear over the
+        loop without silencing it.
+        """
+        self.game.mixer.play_effect(name)
+        if self._music_on:
+            dur = self.game.mixer.effects[name].get_length()
+            self.game.mixer.duck_music(dur, duck_vol=self.music_duck_vol,
+                                       restore_vol=self.music_vol)
 
     # -- phase transitions --------------------------------------------------
     def _begin_ready(self, delay_ms):
@@ -111,7 +152,7 @@ class Catch(Program):
         self.state = self.PAUSE
         self.game.lasers.set_word(1 << self.target)  # hold target lit during the cue
         if announce:
-            self.game.mixer.play_effect(self.level_sounds[level_index])
+            self._play_cue(self.level_sounds[level_index])
         self.after(self.level_advance_ms, self._start_chase)
 
     def _start_chase(self):
@@ -145,7 +186,7 @@ class Catch(Program):
 
     def _announce_climb(self):
         """Play the level-up ('nice catch') cue for the level being climbed to."""
-        self.game.mixer.play_effect(self.level_sounds[self.level_index + 1])
+        self._play_cue(self.level_sounds[self.level_index + 1])
 
     def _miss(self):
         """A miss: hold the missed frame, play the failure line, then drop to L1.
@@ -155,7 +196,7 @@ class Catch(Program):
         their timing was and still pick out the target before re-arming at L1.
         """
         self.state = self.MISS_HOLD  # blip frozen at self.blip; _render keeps it lit
-        self.game.mixer.play_effect(self.miss_sound)
+        self._play_cue(self.miss_sound)
         self.after(self.miss_reset_ms, self._rearm)
 
     def _rearm(self):
@@ -170,6 +211,11 @@ class Catch(Program):
         """Won the final level: do what Golf does -- congrats + dance, then menu."""
         self.state = self.PAUSE
         dur = self.game.mixer.effects[self.win_sound].get_length()
+        # End of the game: fade the bed out under the celebration rather than
+        # ducking, so no restore thread outlives teardown to stomp the next
+        # program's music. (No-op if the bed never started.)
+        if self._music_on:
+            self.game.mixer.fade_music(fade_ms=1000)
         self.game.mixer.play_effect(self.win_sound)
         random_k_dance(k=3, fps=8, dur=max(0, dur - 1.2)).start()
         self.after(dur * 1000, self.quit)

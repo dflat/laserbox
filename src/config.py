@@ -116,6 +116,21 @@ class config:
         MISS_SOUND = "catch/miss.wav"
         WIN_SOUND = "positive/congrats_extended.wav"  # Golf-style big celebration
 
+        # Looping backing track, streamed from ``assets/music/`` (flat -- no
+        # subdirs). Plays on repeat for the whole session and is stopped
+        # automatically when Catch exits (state-machine teardown). Optional: if
+        # the file is absent or unplayable the game just runs without it.
+        #
+        # Prefer **OGG Vorbis** -- small like MP3 but loops *gaplessly* under
+        # SDL_mixer. MP3 loops with an audible gap (encoder padding SDL does not
+        # strip); WAV loops perfectly but is large. Set ``MUSIC = None`` to
+        # disable. ``MUSIC_VOL`` is the bed level; ``MUSIC_DUCK_VOL`` is the
+        # small dip it drops to *under* a spoken cue (level/miss line) before
+        # rising back, so announcements stay clear without silencing the loop.
+        MUSIC = "catch_loop.ogg"
+        MUSIC_VOL = 0.6
+        MUSIC_DUCK_VOL = 0.35
+
     class WhackAMole:
         """Settings for :class:`~src.programs.whack_a_mole.WhackAMole`."""
 

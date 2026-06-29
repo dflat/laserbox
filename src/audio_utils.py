@@ -149,14 +149,34 @@ class Mixer:
         threading.Thread(target=self._duck_for_sound, args=(sound,)).start()
 
     def _duck_for_sound(self, sound):
-        """Worker: play the sound, fade music down, wait, fade back up."""
+        """Worker: play the sound, then duck the music for its duration."""
         sound.play() # start playing sound just as fade down begins
-        fade_dur = min(self.DUCK_DUR, sound.get_length()/2)
-        self._fade(pygame.mixer.music.get_volume(), self.VOL_LOW, fade_dur)
-        #sound.play()
-        wait = sound.get_length() - fade_dur
-        time.sleep(max(wait, 0))
-        self._fade(pygame.mixer.music.get_volume(), self.VOL_HIGH, self.DUCK_DUR)
+        self._duck_music(sound.get_length())
+
+    def duck_music(self, duration, duck_vol=None, restore_vol=None):
+        """Dip the music for ``duration`` seconds, then restore it (threaded).
+
+        Like :meth:`duck_for_sound` but it does **not** own the sound: the caller
+        plays its own effect (e.g. via :meth:`play_effect`) and this only rides
+        the music volume down and back. That lets a program whose bed sits below
+        full volume duck under a cue and return to *its* level, not ``VOL_HIGH``.
+
+        Args:
+            duration: Seconds to stay ducked (typically the cue's length).
+            duck_vol: Volume to dip to. Defaults to :attr:`VOL_LOW`.
+            restore_vol: Volume to return to. Defaults to :attr:`VOL_HIGH`.
+        """
+        threading.Thread(target=self._duck_music,
+                         args=(duration, duck_vol, restore_vol)).start()
+
+    def _duck_music(self, duration, duck_vol=None, restore_vol=None):
+        """Worker: fade the music down, hold for ``duration``, fade back up."""
+        duck_vol = self.VOL_LOW if duck_vol is None else duck_vol
+        restore_vol = self.VOL_HIGH if restore_vol is None else restore_vol
+        fade_dur = min(self.DUCK_DUR, duration / 2)
+        self._fade(pygame.mixer.music.get_volume(), duck_vol, fade_dur)
+        time.sleep(max(duration - fade_dur, 0))
+        self._fade(pygame.mixer.music.get_volume(), restore_vol, self.DUCK_DUR)
 
     def _fade(self, start_vol, end_vol, fade_dur, fps=30):
         """Linearly ramp the music volume from ``start_vol`` to ``end_vol``."""
