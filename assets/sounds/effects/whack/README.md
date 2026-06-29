@@ -40,6 +40,7 @@ entry and is **skippable** — pressing a button to pick a mode cuts it short.
 | `player_1_scored.wav`                 | "Player one scored" (2-player readout lead-in) |
 | `player_2_scored.wav`                 | "Player two scored" (2-player readout lead-in) |
 | `perfect_game.wav`                    | "Perfect game!" (spoken when a player had 0 misses) |
+| `and.wav`                             | "and" (joins the score to the miss count: "…five and three misses") |
 | `miss.wav` / `misses.wav`             | "miss" / "misses" (suffix after the miss count) |
 | `../menu/whack_a_mole.wav`            | "Whack a mole." (GameSelect menu announcement)|
 
@@ -53,10 +54,13 @@ e.g. 247 → `num/200` + `num/40` + `num/7` (see `WhackAMole._number_clips`); sc
 above 299 are clamped.
 
 A **miss** is a mole that timed out unwhacked (tracked per half). The readout says
-`perfect_game` for zero misses, otherwise the count + `miss`/`misses`.
+`perfect_game` for zero misses, otherwise `and` + the count + `miss`/`misses` (so
+it reads "…five **and** three misses").
 
 * 1-player: `result_single` → `you_scored` → *N* → *misses* → (`new_highscore` if a PB).
 * 2-player: `player_1_scored` → *N* → *misses* → `player_2_scored` → *M* → *misses* → winner → (`new_record`).
+
+  where *misses* expands to `perfect_game`, or `and` → *count* → `miss`/`misses`.
 
 ## Score tracker
 

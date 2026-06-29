@@ -102,13 +102,14 @@ def main():
     check("clamps above 299",
           p0._number_clips(350) == ["whack/num/200.wav", "whack/num/90.wav", "whack/num/9.wav"])
 
-    # miss readout: 'perfect game' at zero, else count + miss/misses
+    # miss readout: 'perfect game' at zero, else 'and' + count + miss/misses
     check("miss clips loaded",
-          all(n in fx for n in (p0.perfect_game, p0.miss_word, p0.misses_word)))
-    check("zero misses -> perfect game", p0._misses_clips(0) == [p0.perfect_game])
-    check("one miss -> singular", p0._misses_clips(1) == ["whack/num/1.wav", p0.miss_word])
-    check("several misses -> plural",
-          p0._misses_clips(3) == ["whack/num/3.wav", p0.misses_word])
+          all(n in fx for n in (p0.perfect_game, p0.and_word, p0.miss_word, p0.misses_word)))
+    check("zero misses -> perfect game (no 'and')", p0._misses_clips(0) == [p0.perfect_game])
+    check("one miss -> 'and' + singular",
+          p0._misses_clips(1) == [p0.and_word, "whack/num/1.wav", p0.miss_word])
+    check("several misses -> 'and' + plural",
+          p0._misses_clips(3) == [p0.and_word, "whack/num/3.wav", p0.misses_word])
 
     # --- 1-player: a BLACK button (port 2) starts single mode ---
     step(1 << 2)       # press a black button

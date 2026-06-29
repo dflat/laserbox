@@ -81,6 +81,7 @@ class WhackAMole(Program):
         self.player_2_scored = cfg.PLAYER_2_SCORED
         self.num_dir = cfg.NUM_DIR
         self.perfect_game = cfg.PERFECT_GAME
+        self.and_word = cfg.AND_WORD
         self.miss_word = cfg.MISS_WORD
         self.misses_word = cfg.MISSES_WORD
         self.congrats = cfg.CONGRATS
@@ -103,7 +104,8 @@ class WhackAMole(Program):
         for name in (self.welcome, self.result_single, self.p1_wins, self.p2_wins,
                      self.tie, self.new_highscore, self.new_record_vo,
                      self.you_scored, self.player_1_scored, self.player_2_scored,
-                     self.perfect_game, self.miss_word, self.misses_word):
+                     self.perfect_game, self.and_word, self.miss_word,
+                     self.misses_word):
             self._safe_load_effect(name)
         # Number bank for the spoken score: ones/teens 0-19 + tens 20..90 + hundreds
         # 100/200, from which any 0-299 is composed (see _number_clips).
@@ -422,10 +424,16 @@ class WhackAMole(Program):
         return clips
 
     def _misses_clips(self, m):
-        """Clip name(s) for the miss readout: 'perfect game', or count + miss(es)."""
+        """Clip name(s) for the miss readout: 'perfect game', or 'and' + count + miss(es).
+
+        The leading 'and' joins the readout to the score just spoken before it
+        ("...five and three misses"). A perfect game (zero misses) stands alone,
+        with no 'and' to dangle off.
+        """
         if m == 0:
             return [self.perfect_game]
-        return self._number_clips(m) + [self.miss_word if m == 1 else self.misses_word]
+        word = self.miss_word if m == 1 else self.misses_word
+        return [self.and_word] + self._number_clips(m) + [word]
 
     def _load_scores(self):
         """Read the saved records into ``self.scores``; default to zeros if absent.
