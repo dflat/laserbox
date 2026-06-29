@@ -99,12 +99,14 @@ class config:
 
         LEVEL_ADVANCE_MS = 1500  # pause (under the announcement) between levels
         MISS_RESET_MS = 2000  # pause after a miss before re-arming at level 1
-        CATCH_HOLD_MS = 2000  # freeze the caught laser this long so the hit is seen
+        CATCH_HOLD_MS = 2000  # hold the caught laser lit this long so the hit is seen
+        CATCH_CUE_DELAY_MS = 250  # gap from the catch zap to the "nice catch" cue
 
         # Voice / sfx, paths under assets/sounds/effects. The announcements are
         # edge-tts (en-AU-WilliamMultilingualNeural); the level lines double as
         # the "nice catch" feedback. The final-round win reuses Golf's celebration.
         INTRO_SOUND = "catch/intro.wav"
+        ZAP_SOUND = "catch/big-zap.wav"  # fires the instant a catch lands
         LEVEL_SOUNDS = (
             "catch/level_1.wav",
             "catch/level_2.wav",

@@ -120,23 +120,30 @@ def main():
     check("after the hold -> CHASE", prog().state == "CHASE")
     check("blip spawns at port 0", prog().blip == 0)
 
-    # 5. CATCH on a non-final level: hold to show the hit, then climb (announced)
+    # 5. CATCH on a non-final level: the big zap fires immediately, the nice-catch
+    #    cue a beat later, and the caught laser is just held lit (no silent freeze).
     arm_chase(blip=target, level=0)
     step(1 << target)
-    check("catch -> CATCH_HOLD (freezes the hit)", prog().state == "CATCH_HOLD")
+    check("catch -> CATCH_HOLD (holds the hit)", prog().state == "CATCH_HOLD")
     check("caught laser held solid lit", game.lasers.to_word() == (1 << target))
+    check("big zap plays immediately on the catch", played[-1] == cfg.ZAP_SOUND)
     check("level not advanced until the hold ends", prog().level_index == 0)
-    prog()._enter_level(prog().level_index + 1)  # far side of the catch-hold
+    prog()._announce_climb()  # far side of the cue delay
+    check("nice-catch cue follows the zap", played[-1] == cfg.LEVEL_SOUNDS[1])
+    played.clear()
+    prog()._enter_level(prog().level_index + 1, announce=False)  # far side of the hold
     check("after the hold -> PAUSE", prog().state == "PAUSE")
     check("climbed to level index 1", prog().level_index == 1)
-    check("level-2 announced after the hold", played[-1] == cfg.LEVEL_SOUNDS[1])
+    check("no re-announcement after the hold", played == [])
 
     arm_chase(blip=target, level=1)
     step(1 << target)
     check("catch on level 1 -> CATCH_HOLD", prog().state == "CATCH_HOLD")
-    prog()._enter_level(prog().level_index + 1)
+    check("big zap on the level-1 catch", played[-1] == cfg.ZAP_SOUND)
+    prog()._announce_climb()
+    check("nice-catch cue is level 3's", played[-1] == cfg.LEVEL_SOUNDS[2])
+    prog()._enter_level(prog().level_index + 1, announce=False)
     check("climbed to level index 2", prog().level_index == 2)
-    check("level-3 announced after the hold", played[-1] == cfg.LEVEL_SOUNDS[2])
 
     # 6. MISS: target press while the blip is elsewhere
     arm_chase(blip=target + 2, level=2)
@@ -161,9 +168,11 @@ def main():
     step(1 << 5)
     check("wrong button still catches when blip is on target",
           prog().state == "CATCH_HOLD")
-    prog()._enter_level(prog().level_index + 1)  # far side of the catch-hold
+    check("big zap on the any-button catch", played[-1] == cfg.ZAP_SOUND)
+    prog()._announce_climb()
+    check("nice-catch cue is level 3's", played[-1] == cfg.LEVEL_SOUNDS[2])
+    prog()._enter_level(prog().level_index + 1, announce=False)  # far side of the hold
     check("any-button catch climbs a level", prog().level_index == 2)
-    check("level-3 announced after the hold", played[-1] == cfg.LEVEL_SOUNDS[2])
 
     # 7. blip bounces at both ends and keeps going (no auto-stop)
     p = prog()

@@ -19,11 +19,12 @@ from round to round.
 Pressing **any** button during the chase stops the blip and resolves the round
 by where it is at that instant:
 
-* **Catch** -- blip on the target. The caught laser is held solid for
-  ``config.Catch.CATCH_HOLD_MS`` so the hit is plainly visible, then the player
-  climbs to the next, faster level (announced by voice). Catching on the final
-  (fourth) level wins the whole game with a Golf-style celebration, then returns
-  to the menu.
+* **Catch** -- blip on the target. A zap fires the instant the catch lands, the
+  "nice catch" level-up cue follows a beat later, and the caught laser is held
+  solid for ``config.Catch.CATCH_HOLD_MS`` (the hold is visual only -- the audio
+  keeps moving) so the hit is plainly visible; then the player climbs to the
+  next, faster level. Catching on the final (fourth) level wins the whole game
+  with a Golf-style celebration, then returns to the menu.
 * **Miss** -- blip anywhere else. A failure line plays and the player drops back
   to level 1.
 
@@ -66,7 +67,9 @@ class Catch(Program):
         self.level_advance_ms = cfg.LEVEL_ADVANCE_MS
         self.miss_reset_ms = cfg.MISS_RESET_MS
         self.catch_hold_ms = cfg.CATCH_HOLD_MS
+        self.catch_cue_delay_ms = cfg.CATCH_CUE_DELAY_MS
         self.intro_sound = cfg.INTRO_SOUND
+        self.zap_sound = cfg.ZAP_SOUND
         self.miss_sound = cfg.MISS_SOUND
         self.win_sound = cfg.WIN_SOUND
         # Half a blink cycle: BLINK_HZ flashes/sec => on this long, off this long.
@@ -75,7 +78,7 @@ class Catch(Program):
         # Load effects in start() (not __init__) so they stay valid against the
         # current mixer, which other programs may have re-initialised. The win
         # sound matches Golf's celebration volume.
-        for name in (self.intro_sound, self.miss_sound, *self.level_sounds):
+        for name in (self.intro_sound, self.zap_sound, self.miss_sound, *self.level_sounds):
             self.game.mixer.load_effect(name)
         self.game.mixer.load_effect(self.win_sound, volume=config.CONGRATS_VOL)
 
@@ -125,15 +128,24 @@ class Catch(Program):
         self._catch_hold()
 
     def _catch_hold(self):
-        """Freeze the caught laser solid for a beat, then climb to the next level.
+        """Zap on the catch, hold the caught laser lit, then climb to the next level.
 
-        Holds the target lit (solid, not blinking) where the catch landed for
-        ``catch_hold_ms`` so the player clearly sees they got it, before the next
-        round announces itself and previews its new target.
+        The zap fires immediately; the "nice catch" cue follows ``catch_cue_delay_ms``
+        later (the zap rings under it -- the beat is never silent). Only the laser is
+        held: it stays solid (not blinking) for ``catch_hold_ms`` so the player
+        clearly sees the hit, then the next round picks up (new target preview +
+        chase) without re-announcing.
         """
         self.state = self.CATCH_HOLD
         self.game.lasers.set_word(1 << self.target)  # solid "you got it"
-        self.after(self.catch_hold_ms, self._enter_level, self.level_index + 1)
+        self.game.mixer.play_effect(self.zap_sound)  # big zap, the instant the catch lands
+        self.after(self.catch_cue_delay_ms, self._announce_climb)  # nice-catch cue a beat later
+        self.after(self.catch_hold_ms, self._enter_level, self.level_index + 1,
+                   announce=False)  # cue already played by _announce_climb
+
+    def _announce_climb(self):
+        """Play the level-up ('nice catch') cue for the level being climbed to."""
+        self.game.mixer.play_effect(self.level_sounds[self.level_index + 1])
 
     def _miss(self):
         """A miss: hold the missed frame, play the failure line, then drop to L1.
