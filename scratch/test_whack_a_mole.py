@@ -80,10 +80,10 @@ def main():
     check("starts with a fresh (zeroed) score board",
           prog().scores == {"solo_best": 0, "versus_best": 0})
 
-    # spoken score readout (0-99 composed from the number bank, Trivia-style)
+    # spoken result readout: "<who> hit N mole(s) and got M miss(es)" (Trivia-style)
     p0 = prog()
-    check("score lead-ins loaded",
-          all(n in fx for n in (p0.you_scored, p0.player_1_scored, p0.player_2_scored)))
+    check("hit lead-ins loaded",
+          all(n in fx for n in (p0.you_hit, p0.player_1_hit, p0.player_2_hit)))
     check("number bank loaded (incl. hundreds)",
           all(f"whack/num/{v}.wav" in fx for v in (0, 7, 19, 20, 90, 9, 100, 200)))
     check("single-digit -> one clip", p0._number_clips(7) == ["whack/num/7.wav"])
@@ -102,14 +102,25 @@ def main():
     check("clamps above 299",
           p0._number_clips(350) == ["whack/num/200.wav", "whack/num/90.wav", "whack/num/9.wav"])
 
-    # miss readout: 'perfect game' at zero, else 'and' + count + miss/misses
+    # hit readout: lead-in + count + mole/moles (singular only at exactly one)
+    check("hit words loaded", all(n in fx for n in (p0.mole_word, p0.moles_word)))
+    check("one hit -> 'You hit' + singular mole",
+          p0._hits_clips(p0.you_hit, 1) == [p0.you_hit, "whack/num/1.wav", p0.mole_word])
+    check("several hits -> lead + plural moles",
+          p0._hits_clips(p0.player_1_hit, 5)
+          == [p0.player_1_hit, "whack/num/5.wav", p0.moles_word])
+    check("zero hits -> plural moles",
+          p0._hits_clips(p0.you_hit, 0) == [p0.you_hit, "whack/num/0.wav", p0.moles_word])
+
+    # miss readout: always 'and got' + count + miss/misses (including a shutout)
     check("miss clips loaded",
-          all(n in fx for n in (p0.perfect_game, p0.and_word, p0.miss_word, p0.misses_word)))
-    check("zero misses -> perfect game (no 'and')", p0._misses_clips(0) == [p0.perfect_game])
-    check("one miss -> 'and' + singular",
-          p0._misses_clips(1) == [p0.and_word, "whack/num/1.wav", p0.miss_word])
-    check("several misses -> 'and' + plural",
-          p0._misses_clips(3) == [p0.and_word, "whack/num/3.wav", p0.misses_word])
+          all(n in fx for n in (p0.and_got, p0.miss_word, p0.misses_word)))
+    check("zero misses -> 'and got zero misses'",
+          p0._misses_clips(0) == [p0.and_got, "whack/num/0.wav", p0.misses_word])
+    check("one miss -> 'and got' + singular",
+          p0._misses_clips(1) == [p0.and_got, "whack/num/1.wav", p0.miss_word])
+    check("several misses -> 'and got' + plural",
+          p0._misses_clips(3) == [p0.and_got, "whack/num/3.wav", p0.misses_word])
 
     # --- 1-player: a BLACK button (port 2) starts single mode ---
     step(1 << 2)       # press a black button
@@ -136,7 +147,11 @@ def main():
     check("1-player never exceeds SINGLE_MAX_MOLES", max_moles <= p.single_max)
     check("unwhacked moles count as misses", p.misses["left"] > 0)
 
-    # whack a live mole -> score increments, that mole clears
+    # whack a live mole -> score increments, that mole clears. The 1-player board
+    # can be momentarily empty between a spawn tick and the next, so guarantee a
+    # live mole rather than depending on where the random run loop happened to end.
+    if not p.moles:
+        p._spawn_one(*p.sides[0])
     target = next(iter(p.moles))
     before = p.score["left"]
     step(1 << target)

@@ -80,13 +80,13 @@ class config:
     class Catch:
         """Settings for :class:`~src.programs.catch.Catch`."""
 
-        # The blip ping-pongs across the left/black half only (ports 0..N_PORTS-1).
-        N_PORTS = 7  # lasers the blip travels across (0..6, one-sided)
+        # The blip ping-pongs across lasers 0..N_PORTS-1 (the left/black side).
+        N_PORTS = 6  # lasers the blip travels across (0..5)
         # Candidate target ports, re-rolled each round. The interior of the row is
-        # used -- not the 0/6 turnaround ends, which the blip visits half as often
+        # used -- not the 0/5 turnaround ends, which the blip visits half as often
         # (and port 0 is also the spawn) -- so every round's target gets equal
         # catch windows regardless of where it lands.
-        TARGET_PORTS = (1, 2, 3, 4, 5)
+        TARGET_PORTS = (1, 2, 3, 4)
         BLINK_HZ = 2  # target blink rate while waiting/chasing (twice a sec)
 
         # ms per blip move at each progression level; each level is faster than
@@ -99,6 +99,7 @@ class config:
 
         LEVEL_ADVANCE_MS = 1500  # pause (under the announcement) between levels
         MISS_RESET_MS = 2000  # pause after a miss before re-arming at level 1
+        CATCH_HOLD_MS = 2000  # freeze the caught laser this long so the hit is seen
 
         # Voice / sfx, paths under assets/sounds/effects. The announcements are
         # edge-tts (en-AU-WilliamMultilingualNeural); the level lines double as
@@ -116,7 +117,7 @@ class config:
     class WhackAMole:
         """Settings for :class:`~src.programs.whack_a_mole.WhackAMole`."""
 
-        ROUND_MS = 60000  # length of a timed round
+        ROUND_MS = 45000  # length of a timed round
 
         # Port layout: two halves. 1-player uses LEFT only; 2-player uses both,
         # LEFT = player 1 ("black" keys), RIGHT = player 2 ("white" keys). The box
@@ -166,20 +167,22 @@ class config:
         TIE = "whack/tie.wav"
         NEW_HIGHSCORE = "whack/new_highscore.wav"  # solo personal-best beaten
         NEW_RECORD = "whack/new_record.wav"        # 2-player all-time best beaten
-        # Spoken end-of-round score readout. Numbers are composed from a small bank
-        # (ones/teens 0-19 + tens 20-90) under NUM_DIR, sequenced like Trivia's
-        # score line, so any value 0-99 is one or two clips.
-        YOU_SCORED = "whack/you_scored.wav"          # 1-player: "You scored" + N
-        PLAYER_1_SCORED = "whack/player_1_scored.wav"  # 2-player: "Player one scored" + N
-        PLAYER_2_SCORED = "whack/player_2_scored.wav"  # 2-player: "Player two scored" + M
+        # Spoken end-of-round result readout: "<who> hit N mole(s) and got M
+        # miss(es)", composed clip-by-clip (Trivia-style). The lead-ins name the
+        # whacker; the count is built from the num/ bank; MOLE/MOLES and the miss
+        # words below carry the singular/plural.
+        YOU_HIT = "whack/you_hit.wav"              # 1-player: "You hit" + N + mole(s)
+        PLAYER_1_HIT = "whack/player_1_hit.wav"    # 2-player: "Player one hit" + N
+        PLAYER_2_HIT = "whack/player_2_hit.wav"    # 2-player: "Player two hit" + M
+        MOLE_WORD = "whack/mole.wav"               # singular, after a count of 1
+        MOLES_WORD = "whack/moles.wav"             # plural, after any other count
         # num/<0..19>.wav + tens num/<20..90>.wav + hundreds num/100.wav,200.wav,
         # composed by _number_clips up to 299 (e.g. 247 = 200 + 40 + 7).
         NUM_DIR = "whack/num"
-        # Miss readout, appended after each score: zero misses speaks PERFECT_GAME;
-        # otherwise AND_WORD then the count then MISS_WORD (1) / MISSES_WORD (2+),
-        # so it joins the score ("...five and three misses").
-        PERFECT_GAME = "whack/perfect_game.wav"
-        AND_WORD = "whack/and.wav"  # "and", linking the score to the miss count
+        # Miss half, appended after the hit count: "and got" then the count then
+        # MISS_WORD (1) / MISSES_WORD (2+) -> "...and got three misses". Always
+        # spoken, so a shutout reads "...and got zero misses".
+        AND_GOT = "whack/and_got.wav"
         MISS_WORD = "whack/miss.wav"
         MISSES_WORD = "whack/misses.wav"
         # Shared assets that already exist in the repo.

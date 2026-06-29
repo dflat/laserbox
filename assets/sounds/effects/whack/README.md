@@ -36,31 +36,33 @@ entry and is **skippable** — pressing a button to pick a mode cuts it short.
 | `tie.wav`                             | "It's a tie! Dead even."                      |
 | `new_highscore.wav`                   | "New high score! You're the top whacker on the box!" (solo personal best beaten) |
 | `new_record.wav`                      | "A new record! …" (2-player all-time best beaten) |
-| `you_scored.wav`                      | "You scored" (1-player score readout lead-in)  |
-| `player_1_scored.wav`                 | "Player one scored" (2-player readout lead-in) |
-| `player_2_scored.wav`                 | "Player two scored" (2-player readout lead-in) |
-| `perfect_game.wav`                    | "Perfect game!" (spoken when a player had 0 misses) |
-| `and.wav`                             | "and" (joins the score to the miss count: "…five and three misses") |
+| `you_hit.wav`                         | "You hit" (1-player hit readout lead-in)       |
+| `player_1_hit.wav`                    | "Player one hit" (2-player readout lead-in)    |
+| `player_2_hit.wav`                    | "Player two hit" (2-player readout lead-in)    |
+| `mole.wav` / `moles.wav`              | "mole" / "moles" (suffix after the hit count)  |
+| `and_got.wav`                         | "and got" (joins the hit count to the miss count) |
 | `miss.wav` / `misses.wav`             | "miss" / "misses" (suffix after the miss count) |
 | `../menu/whack_a_mole.wav`            | "Whack a mole." (GameSelect menu announcement)|
 
-## Spoken score + miss readout (every round)
+## Spoken result readout (every round)
 
-Every round ends by speaking each player's **score then miss count**. The number
-is **composed** from the `num/` bank (the same idea as Trivia's score line, which
-sequences number clips): ones/teens `num/0…19.wav`, tens `num/20,30,…,90.wav`, and
-hundreds `num/100.wav`/`num/200.wav`. Any value **0-299** is up to three clips —
-e.g. 247 → `num/200` + `num/40` + `num/7` (see `WhackAMole._number_clips`); scores
-above 299 are clamped.
+Every round ends by speaking, per player, **"<who> hit N mole(s) and got M
+miss(es)"**. Each count is **composed** from the `num/` bank (the same idea as
+Trivia's score line, which sequences number clips): ones/teens `num/0…19.wav`,
+tens `num/20,30,…,90.wav`, and hundreds `num/100.wav`/`num/200.wav`. Any value
+**0-299** is up to three clips — e.g. 247 → `num/200` + `num/40` + `num/7` (see
+`WhackAMole._number_clips`); counts above 299 are clamped.
 
-A **miss** is a mole that timed out unwhacked (tracked per half). The readout says
-`perfect_game` for zero misses, otherwise `and` + the count + `miss`/`misses` (so
-it reads "…five **and** three misses").
+A **miss** is a mole that timed out unwhacked (tracked per half). The hit count
+takes `mole`/`moles` and the miss count `miss`/`misses` (singular only at exactly
+one); the miss half is always spoken, so a shutout reads "…and got **zero**
+misses".
 
-* 1-player: `result_single` → `you_scored` → *N* → *misses* → (`new_highscore` if a PB).
-* 2-player: `player_1_scored` → *N* → *misses* → `player_2_scored` → *M* → *misses* → winner → (`new_record`).
+* 1-player: `result_single` → *hits* → *misses* → (`new_highscore` if a PB).
+* 2-player: *hits(P1)* → *misses(P1)* → *hits(P2)* → *misses(P2)* → winner → (`new_record`).
 
-  where *misses* expands to `perfect_game`, or `and` → *count* → `miss`/`misses`.
+  where *hits* = `you_hit`/`player_N_hit` → *count* → `mole`/`moles`, and
+  *misses* = `and_got` → *count* → `miss`/`misses`.
 
 ## Score tracker
 

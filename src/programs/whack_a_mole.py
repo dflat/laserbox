@@ -76,12 +76,13 @@ class WhackAMole(Program):
         self.tie = cfg.TIE
         self.new_highscore = cfg.NEW_HIGHSCORE
         self.new_record_vo = cfg.NEW_RECORD
-        self.you_scored = cfg.YOU_SCORED
-        self.player_1_scored = cfg.PLAYER_1_SCORED
-        self.player_2_scored = cfg.PLAYER_2_SCORED
+        self.you_hit = cfg.YOU_HIT
+        self.player_1_hit = cfg.PLAYER_1_HIT
+        self.player_2_hit = cfg.PLAYER_2_HIT
+        self.mole_word = cfg.MOLE_WORD
+        self.moles_word = cfg.MOLES_WORD
         self.num_dir = cfg.NUM_DIR
-        self.perfect_game = cfg.PERFECT_GAME
-        self.and_word = cfg.AND_WORD
+        self.and_got = cfg.AND_GOT
         self.miss_word = cfg.MISS_WORD
         self.misses_word = cfg.MISSES_WORD
         self.congrats = cfg.CONGRATS
@@ -103,9 +104,9 @@ class WhackAMole(Program):
         self._safe_load_effect(self.mole_hit, volume=0.9)
         for name in (self.welcome, self.result_single, self.p1_wins, self.p2_wins,
                      self.tie, self.new_highscore, self.new_record_vo,
-                     self.you_scored, self.player_1_scored, self.player_2_scored,
-                     self.perfect_game, self.and_word, self.miss_word,
-                     self.misses_word):
+                     self.you_hit, self.player_1_hit, self.player_2_hit,
+                     self.mole_word, self.moles_word, self.and_got,
+                     self.miss_word, self.misses_word):
             self._safe_load_effect(name)
         # Number bank for the spoken score: ones/teens 0-19 + tens 20..90 + hundreds
         # 100/200, from which any 0-299 is composed (see _number_clips).
@@ -304,15 +305,15 @@ class WhackAMole(Program):
         if self.mode == "single":
             score = self.score["left"]
             lines.append(self.result_single)
-            lines.append(self.you_scored); lines += self._number_clips(score)
-            lines += self._misses_clips(self.misses["left"])   # score + misses (or "perfect game")
+            lines += self._hits_clips(self.you_hit, score)     # "You hit N mole(s)"
+            lines += self._misses_clips(self.misses["left"])   # "and got M miss(es)"
             if self._record_broken("solo_best", score):
                 lines.append(self.new_highscore)
         else:
             left, right = self.score["left"], self.score["right"]
-            lines.append(self.player_1_scored); lines += self._number_clips(left)
+            lines += self._hits_clips(self.player_1_hit, left)
             lines += self._misses_clips(self.misses["left"])
-            lines.append(self.player_2_scored); lines += self._number_clips(right)
+            lines += self._hits_clips(self.player_2_hit, right)
             lines += self._misses_clips(self.misses["right"])
             if left > right:
                 self._winner = "left"; lines.append(self.p1_wins)
@@ -423,17 +424,24 @@ class WhackAMole(Program):
             clips.append(self._num_clip(ones))
         return clips
 
-    def _misses_clips(self, m):
-        """Clip name(s) for the miss readout: 'perfect game', or 'and' + count + miss(es).
+    def _hits_clips(self, lead, n):
+        """Clip name(s) for the hit readout: ``lead`` + count + 'mole'/'moles'.
 
-        The leading 'and' joins the readout to the score just spoken before it
-        ("...five and three misses"). A perfect game (zero misses) stands alone,
-        with no 'and' to dangle off.
+        ``lead`` is the spoken lead-in naming the whacker ("You hit" / "Player one
+        hit"); the count is composed from the num/ bank and the trailing word
+        carries the singular/plural ("...hit one mole" vs "...hit five moles").
         """
-        if m == 0:
-            return [self.perfect_game]
+        word = self.mole_word if n == 1 else self.moles_word
+        return [lead] + self._number_clips(n) + [word]
+
+    def _misses_clips(self, m):
+        """Clip name(s) for the miss readout: 'and got' + count + 'miss'/'misses'.
+
+        Always spoken (including a shutout, "...and got zero misses") so the
+        result reads as one sentence: "...hit five moles and got three misses".
+        """
         word = self.miss_word if m == 1 else self.misses_word
-        return [self.and_word] + self._number_clips(m) + [word]
+        return [self.and_got] + self._number_clips(m) + [word]
 
     def _load_scores(self):
         """Read the saved records into ``self.scores``; default to zeros if absent.
