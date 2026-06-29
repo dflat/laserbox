@@ -44,6 +44,7 @@ from ..event_loop import events, EventType
 from ..config import config
 from ..animation import random_k_dance
 from .trivia_source import BankSource, SourceUnavailable
+from .trivia_stats import AskCounts
 from .trivia_voice import select_source_and_voice, PrebakedVoice
 
 
@@ -163,7 +164,8 @@ class Trivia(Program):
                   "falling back to bank")
         source = BankSource(self.cfg.QUESTIONS_PER_MATCH,
                             playlist=self.cfg.CURATED_PLAYLIST,
-                            whitelist=self.cfg.WHITELIST)
+                            whitelist=self.cfg.WHITELIST,
+                            ask_counts=AskCounts())
         voice = PrebakedVoice(self.game.mixer, self.after)
         try:
             source.prepare()

@@ -403,3 +403,12 @@ class config:
         BANK_PATH = "assets/trivia/bank.json"  # question bank (JSON), repo-relative
         WHITELIST_DIR = "assets/trivia/whitelists"  # named bank-subset whitelists
         EFFECT_DIR = "trivia"  # voice-over root under assets/sounds/effects
+
+        # --- selection state (gitignored, per-box; like the score files) ---
+        # Persistent {question_id: times_asked} map. BankSource draws the
+        # least-asked questions first (random within equal counts), so the box
+        # works through its whole pool before any question repeats -- duplicates
+        # stay rare even across reboots. Relative paths resolve against
+        # config.PROJECT_ROOT; an absolute path is used as-is. Sparse: an absent
+        # question counts as asked zero times, so new bank questions are favoured.
+        ASK_COUNTS_PATH = "state/trivia_ask_counts.json"

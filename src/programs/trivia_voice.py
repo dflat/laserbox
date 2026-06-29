@@ -28,6 +28,7 @@ import pygame
 
 from ..config import config
 from .trivia_source import BankSource, OpenTDBSource, SourceUnavailable
+from .trivia_stats import AskCounts
 
 
 class _VoSequencer:
@@ -368,7 +369,8 @@ def _make_source(kind, rng=None):
                              category=config.Trivia.CATEGORY, rng=rng)
     return BankSource(config.Trivia.QUESTIONS_PER_MATCH,
                       playlist=config.Trivia.CURATED_PLAYLIST,
-                      whitelist=config.Trivia.WHITELIST, rng=rng)
+                      whitelist=config.Trivia.WHITELIST, rng=rng,
+                      ask_counts=AskCounts())
 
 
 def _make_voice(kind, mixer, schedule):

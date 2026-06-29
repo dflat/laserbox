@@ -5,9 +5,12 @@ concrete sources implement the same small contract so the game never knows which
 is wired in:
 
 * :class:`BankSource` -- reads a local JSON bank (``assets/trivia/bank.json``).
-  Samples ``count`` distinct questions at random; a ``whitelist`` first narrows
-  the pool to a named subset of the bank, while a ``playlist`` instead plays an
-  exact curated list in order (playlist wins if both are given).
+  Samples ``count`` distinct questions, favouring the least-asked ones when an
+  :class:`~src.programs.trivia_stats.AskCounts` store is wired in (random within
+  equal counts), so the box works through its whole pool before any question
+  repeats. A ``whitelist`` first narrows the pool to a named subset of the bank,
+  while a ``playlist`` instead plays an exact curated list in order (playlist
+  wins if both are given).
 * :class:`OpenTDBSource` -- fetches a batch from the Open Trivia DB over HTTP.
 
 Everything is decided up front in :meth:`QuestionSource.prepare` (one batch
@@ -188,12 +191,18 @@ class QuestionSource(abc.ABC):
 class BankSource(QuestionSource):
     """Reads questions from the local JSON bank.
 
-    Default: shuffles the whole bank and pulls ``count`` for the match (extras stay
-    available for sudden-death). With a ``whitelist``: the same random draw, but
-    restricted first to the whitelisted subset of bank questions. With a
+    Default: orders the whole bank least-asked-first and pulls ``count`` for the
+    match (extras stay available for sudden-death). With a ``whitelist``: the same
+    draw, but restricted first to the whitelisted subset of bank questions. With a
     ``playlist``: plays exactly those questions in order, then any leftover bank
     questions (shuffled) back the sudden-death rounds. A playlist takes precedence
     over a whitelist if both are supplied.
+
+    When an ``ask_counts`` store is supplied the draw is biased toward the
+    least-asked questions (random within equal counts) and each question is
+    recorded as asked the moment it is handed out, so selection favours unseen
+    questions and that bias persists across reboots. Without a store (e.g. tests)
+    the draw is a plain random shuffle and nothing is persisted.
 
     Args:
         count: Desired match length (ignored when a playlist is given).
@@ -205,14 +214,20 @@ class BankSource(QuestionSource):
             iterable of question ids. The match still randomly samples ``count``
             distinct questions, only from this subset.
         rng: Random source (injectable for deterministic tests).
+        ask_counts: Optional :class:`~src.programs.trivia_stats.AskCounts` store.
+            When given, drives the least-asked-first ordering and records each
+            question as it is asked; when ``None``, selection is a plain shuffle
+            and no state is written.
     """
 
-    def __init__(self, count, bank_path=None, playlist=None, whitelist=None, rng=None):
+    def __init__(self, count, bank_path=None, playlist=None, whitelist=None,
+                 rng=None, ask_counts=None):
         super().__init__(count)
         self.bank_path = bank_path or config.Trivia.BANK_PATH
         self.playlist = playlist
         self.whitelist = whitelist
         self.rng = rng or random
+        self.ask_counts = ask_counts
 
     def prepare(self) -> None:
         questions = self._load_bank()
@@ -229,9 +244,30 @@ class BankSource(QuestionSource):
             self._remaining = deque(chosen + extra)
         else:
             questions = self._apply_whitelist(questions)
-            self.rng.shuffle(questions)
+            questions = self._order_pool(questions)
             self.match_length = min(self.count, len(questions))
             self._remaining = deque(questions)
+
+    def _order_pool(self, questions: list[Question]) -> list[Question]:
+        """Order the drawable pool for the match.
+
+        With an ``ask_counts`` store this is least-asked-first (random within
+        equal counts) so the box favours unseen questions; without one it is a
+        plain random shuffle (the historical behaviour, and what tests rely on).
+        """
+        if self.ask_counts is not None:
+            return self.ask_counts.order_least_asked(questions, self.rng)
+        shuffled = list(questions)
+        self.rng.shuffle(shuffled)
+        return shuffled
+
+    def next_question(self) -> Question | None:
+        """Pop the next question, recording it as asked (if an ``ask_counts``
+        store is wired in) the moment it is handed out."""
+        question = super().next_question()
+        if question is not None and self.ask_counts is not None:
+            self.ask_counts.record_asked(question.id)
+        return question
 
     def _apply_whitelist(self, questions: list[Question]) -> list[Question]:
         """Narrow ``questions`` to the configured whitelist (no-op if unset)."""
