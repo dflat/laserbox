@@ -14,6 +14,7 @@ from . import clock
 from .audio_utils import Mixer
 from .shift_register import InputShiftRegister, OutputShiftRegister
 from .config import config
+from .system_volume import VolumeController
 from .programs import State, StateSequence, StateMachine
 from .event_loop import *
 from .animation import Animation
@@ -160,6 +161,10 @@ class Game:
     self.outputs = OutputManager(register=SIPOreg)
     self.lasers = LaserBay(14) # users interact with this to drive laser output
     self.mixer = mixer
+    # OS-level master volume: restore the persisted level at boot. GameSelect
+    # drives this via buttons 10/11; a no-op under the simulator.
+    self.volume = VolumeController()
+    self.volume.apply()
     self.events = events # event loop reference (redundant as it is global singleton imported in this module)
     Animation.game = self # hack to get game reference from animation instances (todo: make cleaner reference link)
     self.state_machine = StateMachine(self)

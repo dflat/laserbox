@@ -8,6 +8,7 @@ stepping frames and asserting program transitions. Run from repo root:
 """
 import os
 import sys
+import tempfile
 
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -38,6 +39,9 @@ TOGGLE0 = 1 << 14
 
 
 def main():
+    # Point the per-box volume state at a throwaway temp file so the test never
+    # reads or clobbers the real state/system.json (and starts from DEFAULT).
+    config.Volume.STATE_PATH = os.path.join(tempfile.mkdtemp(), "system.json")
     piso = ScriptedPISO()
     sipo = DummySIPO()
     game = Game(PISOreg=piso, SIPOreg=sipo, mixer=Mixer(), events=events)
@@ -97,7 +101,7 @@ def main():
     game.state_machine.program.quit()   # natural finish of a one-item context
     check("single-program finish -> GameSelect", prog() == "GameSelect")
 
-    # 7. unassigned button is a no-op (buttons 9-11 are unassigned)
+    # 7. unassigned button is a no-op (button 9 is unassigned; 10/11 are volume)
     step(0)
     step(1 << 9)
     check("unassigned button -> no arm", game.state_machine.program.armed is None)
@@ -146,6 +150,47 @@ def main():
     step(1 << 13)      # press 3 -> execute (no real reboot: '-s' simulates)
     check("press3 commits power action", gs.power_committed is True)
     check("still GameSelect (simulated, no real shutdown)", prog() == "GameSelect")
+
+    # 10. volume slots (buttons 10/11): instant ±10% steps, no arm/launch.
+    game.state_machine.enter_game_select()
+    gs = game.state_machine.program
+    vol = game.volume
+    ENDCAPS = (1 << 6) | (1 << 7)
+    approx = lambda a, b: abs(a - b) < 1e-6
+
+    def vstep(button):  # press + release a volume button
+        step(1 << button); step(0)
+
+    check("volume starts at DEFAULT 0.7", approx(vol.level, 0.7))
+
+    step(1 << 11)      # press volume up (held)
+    check("volume up -> 0.8", approx(vol.level, 0.8))
+    check("volume press does not arm a slot", gs.armed is None)
+    check("volume press stays in GameSelect", prog() == "GameSelect")
+    check("bar matches level (laser word)", game.lasers.to_word() == gs._volume_bar_word())
+    check("bar never lights the endcap ports", (game.lasers.to_word() & ENDCAPS) == 0)
+    step(0)
+
+    vstep(11); vstep(11)  # 0.9, then 1.0 (max)
+    check("volume up clamps at max 1.0", approx(vol.level, 1.0))
+    check("is_max at 1.0", vol.is_max)
+    step(1 << 11); # one more press at max: stays 1.0, bar = all in-line ports
+    check("at max, bar lights all 12 in-line ports",
+          game.lasers.to_word() == (((1 << 14) - 1) ^ ENDCAPS))
+    step(0)
+
+    for _ in range(10):   # walk all the way down to mute
+        vstep(10)
+    check("volume down clamps at mute 0.0", approx(vol.level, 0.0))
+    check("is_muted at 0.0", vol.is_muted)
+    step(1 << 10); # press down again while muted: bar is dark
+    check("muted bar lights no lasers", game.lasers.to_word() == 0)
+    step(0)
+
+    # a persisted level survives a fresh VolumeController reading the same file
+    from src.system_volume import VolumeController
+    vstep(11)  # 0.0 -> 0.1 (a change, so it's saved)
+    check("level persisted to state file", approx(VolumeController().level, vol.level))
 
     print()
     if all(passed):

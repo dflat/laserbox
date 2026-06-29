@@ -36,6 +36,14 @@ class GameSelect(Program):
     Any button press while a system slot's (long) confirm prompt is still
     speaking cuts it short, so a quick confirm/cancel isn't talked over.
 
+    **Volume slots** (``config.GameSelect.VOLUME_MENU``, buttons 10/11) are the
+    other half of the system-control group. Each press is an instant ±10% step of
+    the OS master volume (no arm/confirm): it lights a laser bar of the new level
+    for a moment and speaks a live-preview confirmation *at the new level*, so the
+    loudness itself previews the change. They act independently of any armed
+    selection. (Volume is menu-only; during a game buttons 10/11 are ordinary
+    game inputs.)
+
     Unassigned buttons are ignored.
     """
     EFFECT_DIR = 'menu'
@@ -50,6 +58,14 @@ class GameSelect(Program):
         self.system_menu = config.GameSelect.SYSTEM_MENU
         self.system_actions = config.GameSelect.SYSTEM_ACTIONS
         self.choose_sound = os.path.join(self.EFFECT_DIR, 'choose_a_game.wav')
+        # Volume slots (buttons 10/11) -- see class docstring.
+        self.volume_menu = config.GameSelect.VOLUME_MENU
+        self.volume_bar_ports = config.GameSelect.VOLUME_BAR_PORTS
+        self.volume_bar_ms = config.GameSelect.VOLUME_BAR_MS
+        self.vol_up = config.GameSelect.VOLUME_UP
+        self.vol_down = config.GameSelect.VOLUME_DOWN
+        self.vol_max = config.GameSelect.VOLUME_MAX
+        self.vol_muted = config.GameSelect.VOLUME_MUTED
 
     def start(self):
         self._ensure_standard_mixer()
@@ -58,6 +74,7 @@ class GameSelect(Program):
         self.press_count = 0      # presses on the armed slot so far
         self.power_committed = False  # a reboot/shutdown has been issued
         self.arm_timeout_ms = config.GameSelect.ARM_TIMEOUT_MS
+        self.bar_deadline = None  # now_ms at which the volume bar clears, or None
         self.game.lasers.set_word(0)
         self._load_effects()
         self._play(self.choose_sound)
@@ -91,6 +108,8 @@ class GameSelect(Program):
             self._load(self._effect_path(spec['announce']))
             self._load(self._effect_path(spec['confirm']))
             self._load(self._effect_path(spec['execute']))
+        for name in (self.vol_up, self.vol_down, self.vol_max, self.vol_muted):
+            self._load(self._effect_path(name))
 
     def _load(self, path):
         try:
@@ -202,11 +221,74 @@ class GameSelect(Program):
             return
         pygame.time.wait(int(sound.get_length() * 1000) + 100)
 
+    # -- volume -------------------------------------------------------------
+    def _effect_len(self, filename):
+        """Length (s) of a loaded menu effect, or 0 if it never loaded."""
+        sound = self.game.mixer.effects.get(self._effect_path(filename))
+        return sound.get_length() if sound else 0.0
+
+    def _volume_bar_word(self):
+        """Laser word for the current volume, as a left->right bar.
+
+        Lights a count of the 12 in-line ports proportional to the level (the two
+        endcap ports are skipped, see ``VOLUME_BAR_PORTS``): none at muted, all 12
+        at max.
+        """
+        ports = self.volume_bar_ports
+        lit = round(self.game.volume.fraction * len(ports))
+        return sum(1 << ports[i] for i in range(lit))
+
+    def _base_laser_word(self):
+        """The laser word to restore once the volume bar's dwell time is up.
+
+        Re-derives what the lasers *should* show from the current arm state, so
+        the temporary bar doesn't clobber an armed slot's lit laser.
+        """
+        if self.armed is None:
+            return 0
+        if self.armed in self.system_menu and self.press_count >= 2:
+            return self.ALL_LASERS  # a power slot mid-confirm lights everything
+        return 1 << self.armed
+
+    def _adjust_volume(self, button_id):
+        """Step the OS master volume and give bar + spoken-preview feedback.
+
+        Up/down steps apply to the OS first, then speak at the new level so the
+        loudness previews the change. The one exception is stepping to mute: the
+        sink would be silent, so we speak "volume muted" at the still-audible
+        level *first* and defer the actual OS mute until just after the line.
+        """
+        vol = self.game.volume
+        direction = self.volume_menu[button_id]
+        self._stop_voice()  # cut any prior preview so rapid presses don't stack
+
+        if direction > 0:
+            vol.step_up()
+            clip = self.vol_max if vol.is_max else self.vol_up
+            self._play(self._effect_path(clip))
+        elif vol.peek_down() <= vol.min:
+            # stepping to mute: announce audibly now, silence the OS after the line
+            self._play(self._effect_path(self.vol_muted))
+            vol.step_down(apply_os=False)  # record/show 0 now; OS muted shortly
+            self.after(int(self._effect_len(self.vol_muted) * 1000) + 50, vol.apply)
+        else:
+            vol.step_down()
+            self._play(self._effect_path(self.vol_down))
+
+        # Flash the new level as a laser bar for a moment, then restore the base.
+        self.game.lasers.set_word(self._volume_bar_word())
+        self.bar_deadline = self.now_ms + self.volume_bar_ms
+
     def update(self, dt):
         super().update(dt)
 
         if self.power_committed:
             return  # committed to reboot/shutdown; ignore input until we're stopped
+
+        # clear the volume bar once its dwell time is up, restoring the base display
+        if self.bar_deadline is not None and self.now_ms > self.bar_deadline:
+            self.bar_deadline = None
+            self.game.lasers.set_word(self._base_laser_word())
 
         # expire a stale armed selection
         if self.armed is not None and self.now_ms > self.arm_deadline:
@@ -216,6 +298,12 @@ class GameSelect(Program):
             if event.type != EventType.BUTTON_DOWN:
                 continue
             button_id = event.key
+
+            # Volume buttons act immediately and independently of any armed
+            # selection (no arm/confirm) -- handle them before the arm logic.
+            if button_id in self.volume_menu:
+                self._adjust_volume(button_id)
+                continue
 
             # While a power slot is armed its (long) confirm prompt may still be
             # speaking; any press -- confirm or cancel -- cuts it short so it

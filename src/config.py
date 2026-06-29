@@ -257,6 +257,47 @@ class config:
             "poweroff": ["sudo", "systemctl", "poweroff"],
         }
 
+        # --- volume control (buttons 10/11, GameSelect-only) ---
+        # The system-control group alongside the power buttons. Each press is an
+        # instant ±10% step of the OS master volume (see :mod:`src.system_volume`);
+        # there is no arm/confirm flow. Volume is *menu-only* (like the power
+        # slots): during a game buttons 10/11 are ordinary game inputs.
+        # button_id -> step direction (+1 = up, -1 = down).
+        VOLUME_MENU = {
+            10: -1,  # volume down
+            11: +1,  # volume up
+        }
+        # Spoken live-preview confirmations, played at the new level so the loudness
+        # itself previews the change (wavs under assets/sounds/effects/menu/).
+        VOLUME_UP = "volume_up.wav"
+        VOLUME_DOWN = "volume_down.wav"
+        VOLUME_MAX = "max_volume.wav"      # spoken when a step lands at 100%
+        VOLUME_MUTED = "volume_muted.wav"  # spoken when a step lands at 0%
+        # Physical left->right laser order for the volume bar. The two endcap ports
+        # (6 and 7) sit at right angles to the in-line bay and are skipped, so the
+        # bar is the 12 in-line ports in physical order (matches Golf's ``remap``).
+        VOLUME_BAR_PORTS = [0, 13, 1, 12, 2, 11, 3, 10, 4, 9, 5, 8]
+        VOLUME_BAR_MS = 1200  # how long the bar stays lit after a press
+
+    class Volume:
+        """Settings for the OS-level master volume (see :mod:`src.system_volume`).
+
+        Volume is controlled at the OS layer (PipeWire via ``wpctl``) rather than
+        in-app, because pygame has no master gain. The chosen level is persisted
+        per-box and re-applied at boot.
+        """
+
+        # Persistent, per-box system state (gitignored, not version-controlled).
+        # Relative paths resolve against config.PROJECT_ROOT; an absolute path is
+        # used as-is (the headless test points this at a temp file). Kept separate
+        # from per-game score files (e.g. whack_a_mole.json) because volume is a
+        # system-wide setting, not a game record.
+        STATE_PATH = "state/system.json"
+        DEFAULT = 0.7  # level used on first boot, before any state file exists
+        STEP = 0.1     # 10% per button press
+        MIN = 0.0
+        MAX = 1.0
+
     class Trivia:
         """Settings for :class:`~src.programs.trivia.Trivia`.
 
