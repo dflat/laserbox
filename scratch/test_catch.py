@@ -44,7 +44,11 @@ def main():
     dt = 1000 / config.FPS
 
     cfg = config.Catch
-    target = cfg.TARGET
+    # Catch now re-rolls a random target each round; pin a deterministic interior
+    # port for the scripted checks and force it onto the program where a chase is
+    # armed (target + 2 must stay a valid non-target port on the half).
+    target = 3
+    assert target in cfg.TARGET_PORTS and (target + 2) <= (cfg.N_PORTS - 1)
     last = cfg.N_PORTS - 1
     n_levels = len(cfg.LEVEL_STEP_MS)
 
@@ -72,6 +76,7 @@ def main():
         p.scheduler = []          # drop any pending scheduled transition
         p.state = p.CHASE
         p.level_index = level
+        p.target = target     # pin the re-rolled target so the scripted press lands
         p.blip = blip
         p.blip_dir = 1
         p._blip_accum_ms = 0.0
@@ -87,7 +92,9 @@ def main():
     check("intro plays on start", cfg.INTRO_SOUND in played)
     check("starts in READY", prog().state == "READY")
 
-    # 2. during the intro, only the target laser blinks (no other bit ever set)
+    # 2. during the intro, only the target laser blinks (no other bit ever set).
+    # Pin the randomly-previewed target so the laser-word check is deterministic.
+    prog().target = target
     step(0)
     check("READY lights only the target", game.lasers.to_word() == (1 << target))
     prog()._clock_ms = prog().blink_half_period_ms + 1  # push into the dark half

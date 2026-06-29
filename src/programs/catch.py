@@ -1,23 +1,27 @@
-"""Catch: a reaction-timing climb across three speed levels on one target laser.
+"""Catch: a reaction-timing climb across four speed levels on a moving target.
 
-The whole game revolves around a single fixed port, ``config.Catch.TARGET``
-(laser 3). Play proceeds in phases:
+Play happens on the left/black half of the row only -- ports ``0..6`` -- with a
+fresh random target each round. Phases:
 
 * **READY** -- a short spoken intro explains the rules while only the target
   laser blinks (at ``config.Catch.BLINK_HZ``, twice a second). Level 1 then
   starts on its own when the intro finishes; pressing any button skips the rest
   of the intro and starts level 1 immediately.
-* **CHASE** -- a single laser "blip" spawns at port 0 and bounces back and forth
-  across every port (``0 -> 13 -> 0``) at the current level's speed. It keeps
+* **CHASE** -- a single laser "blip" spawns at port 0 and ping-pongs back and
+  forth across the half (``0 -> 6 -> 0``) at the current level's speed. It keeps
   bouncing **forever** until the player presses. The target keeps blinking so the
   goal stays visible while the blip races past it.
+
+Each round picks a new random target from ``config.Catch.TARGET_PORTS`` (held lit
+during the pre-chase pause as a preview), so the spot you are aiming for moves
+from round to round.
 
 Pressing **any** button during the chase stops the blip and resolves the round
 by where it is at that instant:
 
 * **Catch** -- blip on the target. The player climbs to the next, faster level
-  (announced by voice). Catching on the final level wins the whole game with a
-  Golf-style celebration, then returns to the menu.
+  (announced by voice). Catching on the final (fourth) level wins the whole game
+  with a Golf-style celebration, then returns to the menu.
 * **Miss** -- blip anywhere else. A failure line plays and the player drops back
   to level 1.
 
@@ -25,6 +29,8 @@ Speed escalates **per success across the session**, not within one chase: each
 level in ``config.Catch.LEVEL_STEP_MS`` is faster than the last. Reachable from
 the operator menu (GameSelect slot 7) or via ``python -m src -s -p Catch``.
 """
+import random
+
 from .base import *
 from ..event_loop import *
 from ..config import config
@@ -32,7 +38,7 @@ from ..animation import random_k_dance
 
 
 class Catch(Program):
-    """Climb three increasingly fast levels by catching the bouncing blip."""
+    """Climb four increasingly fast levels by catching the bouncing blip."""
 
     # Phase names (also referenced by the headless test).
     READY = "READY"          # intro / target preview; auto-advances or skip w/ a press
@@ -49,7 +55,8 @@ class Catch(Program):
     def start(self):
         """Load audio, play the intro, then auto-start level 1. May run many times."""
         cfg = config.Catch
-        self.target = cfg.TARGET
+        self.target_ports = tuple(cfg.TARGET_PORTS)
+        self.target = random.choice(self.target_ports)  # READY preview; re-rolled per round
         self.last_port = cfg.N_PORTS - 1
         self.level_step_ms = tuple(cfg.LEVEL_STEP_MS)
         self.level_sounds = tuple(cfg.LEVEL_SOUNDS)
@@ -88,8 +95,12 @@ class Catch(Program):
         ``announce`` is suppressed when re-arming at level 1 after a miss: the
         failure line already says we are back at level 1, so replaying the
         "level 1, here we go" cue every reset would be redundant.
+
+        Each level is a fresh **round**, so a new random target is rolled here and
+        held lit through the pause as a preview before the blip starts moving.
         """
         self.level_index = level_index
+        self.target = random.choice(self.target_ports)  # new target each round
         self.state = self.PAUSE
         self.game.lasers.set_word(1 << self.target)  # hold target lit during the cue
         if announce:

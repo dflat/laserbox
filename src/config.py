@@ -80,28 +80,35 @@ class config:
     class Catch:
         """Settings for :class:`~src.programs.catch.Catch`."""
 
-        TARGET = 3  # the fixed target laser/button to "catch" the blip on
-        N_PORTS = 14  # lasers the blip travels across (0 .. N_PORTS-1)
+        # The blip ping-pongs across the left/black half only (ports 0..N_PORTS-1).
+        N_PORTS = 7  # lasers the blip travels across (0..6, one-sided)
+        # Candidate target ports, re-rolled each round. The interior of the row is
+        # used -- not the 0/6 turnaround ends, which the blip visits half as often
+        # (and port 0 is also the spawn) -- so every round's target gets equal
+        # catch windows regardless of where it lands.
+        TARGET_PORTS = (1, 2, 3, 4, 5)
         BLINK_HZ = 2  # target blink rate while waiting/chasing (twice a sec)
 
         # ms per blip move at each progression level; each level is faster than
         # the last. The player climbs one level per successful catch (the blip
         # bounces forever until they press); a miss restarts from level 1. The
-        # first is the spec's 120 ms (~8.3 moves/sec). Length sets the level count
-        # and must match ``LEVEL_SOUNDS``.
-        LEVEL_STEP_MS = (120, 90, 65)
+        # first is the spec's 120 ms (~8.3 moves/sec); the fourth is a slight step
+        # up in speed over the third. Length sets the level count and must match
+        # ``LEVEL_SOUNDS``.
+        LEVEL_STEP_MS = (120, 90, 65, 50)
 
         LEVEL_ADVANCE_MS = 1500  # pause (under the announcement) between levels
         MISS_RESET_MS = 2000  # pause after a miss before re-arming at level 1
 
         # Voice / sfx, paths under assets/sounds/effects. The announcements are
         # edge-tts (en-AU-WilliamMultilingualNeural); the level lines double as
-        # the "nice catch" feedback. The round-3 win reuses Golf's celebration.
+        # the "nice catch" feedback. The final-round win reuses Golf's celebration.
         INTRO_SOUND = "catch/intro.wav"
         LEVEL_SOUNDS = (
             "catch/level_1.wav",
             "catch/level_2.wav",
             "catch/level_3.wav",
+            "catch/level_4.wav",
         )
         MISS_SOUND = "catch/miss.wav"
         WIN_SOUND = "positive/congrats_extended.wav"  # Golf-style big celebration
@@ -169,8 +176,10 @@ class config:
         # composed by _number_clips up to 299 (e.g. 247 = 200 + 40 + 7).
         NUM_DIR = "whack/num"
         # Miss readout, appended after each score: zero misses speaks PERFECT_GAME;
-        # otherwise the count then MISS_WORD (1) / MISSES_WORD (2+).
+        # otherwise AND_WORD then the count then MISS_WORD (1) / MISSES_WORD (2+),
+        # so it joins the score ("...five and three misses").
         PERFECT_GAME = "whack/perfect_game.wav"
+        AND_WORD = "whack/and.wav"  # "and", linking the score to the miss count
         MISS_WORD = "whack/miss.wav"
         MISSES_WORD = "whack/misses.wav"
         # Shared assets that already exist in the repo.
