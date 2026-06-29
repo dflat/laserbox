@@ -120,17 +120,23 @@ def main():
     check("after the hold -> CHASE", prog().state == "CHASE")
     check("blip spawns at port 0", prog().blip == 0)
 
-    # 5. CATCH on a non-final level climbs one level (announced)
+    # 5. CATCH on a non-final level: hold to show the hit, then climb (announced)
     arm_chase(blip=target, level=0)
     step(1 << target)
-    check("catch on level 0 -> PAUSE", prog().state == "PAUSE")
+    check("catch -> CATCH_HOLD (freezes the hit)", prog().state == "CATCH_HOLD")
+    check("caught laser held solid lit", game.lasers.to_word() == (1 << target))
+    check("level not advanced until the hold ends", prog().level_index == 0)
+    prog()._enter_level(prog().level_index + 1)  # far side of the catch-hold
+    check("after the hold -> PAUSE", prog().state == "PAUSE")
     check("climbed to level index 1", prog().level_index == 1)
-    check("level-2 announced on climb", played[-1] == cfg.LEVEL_SOUNDS[1])
+    check("level-2 announced after the hold", played[-1] == cfg.LEVEL_SOUNDS[1])
 
     arm_chase(blip=target, level=1)
     step(1 << target)
-    check("catch on level 1 -> level index 2", prog().level_index == 2)
-    check("level-3 announced on climb", played[-1] == cfg.LEVEL_SOUNDS[2])
+    check("catch on level 1 -> CATCH_HOLD", prog().state == "CATCH_HOLD")
+    prog()._enter_level(prog().level_index + 1)
+    check("climbed to level index 2", prog().level_index == 2)
+    check("level-3 announced after the hold", played[-1] == cfg.LEVEL_SOUNDS[2])
 
     # 6. MISS: target press while the blip is elsewhere
     arm_chase(blip=target + 2, level=2)
@@ -152,10 +158,12 @@ def main():
 
     # 6b. any button (not just the target's own) catches on a winning blip
     arm_chase(blip=target, level=1)
-    step(1 << 7)
+    step(1 << 5)
     check("wrong button still catches when blip is on target",
-          played[-1] == cfg.LEVEL_SOUNDS[2])
+          prog().state == "CATCH_HOLD")
+    prog()._enter_level(prog().level_index + 1)  # far side of the catch-hold
     check("any-button catch climbs a level", prog().level_index == 2)
+    check("level-3 announced after the hold", played[-1] == cfg.LEVEL_SOUNDS[2])
 
     # 7. blip bounces at both ends and keeps going (no auto-stop)
     p = prog()

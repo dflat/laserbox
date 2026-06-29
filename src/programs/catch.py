@@ -1,14 +1,14 @@
 """Catch: a reaction-timing climb across four speed levels on a moving target.
 
-Play happens on the left/black half of the row only -- ports ``0..6`` -- with a
-fresh random target each round. Phases:
+Play happens on lasers ``0..5`` only (the left/black side) with a fresh random
+target each round. Phases:
 
 * **READY** -- a short spoken intro explains the rules while only the target
   laser blinks (at ``config.Catch.BLINK_HZ``, twice a second). Level 1 then
   starts on its own when the intro finishes; pressing any button skips the rest
   of the intro and starts level 1 immediately.
 * **CHASE** -- a single laser "blip" spawns at port 0 and ping-pongs back and
-  forth across the half (``0 -> 6 -> 0``) at the current level's speed. It keeps
+  forth across the row (``0 -> 5 -> 0``) at the current level's speed. It keeps
   bouncing **forever** until the player presses. The target keeps blinking so the
   goal stays visible while the blip races past it.
 
@@ -19,9 +19,11 @@ from round to round.
 Pressing **any** button during the chase stops the blip and resolves the round
 by where it is at that instant:
 
-* **Catch** -- blip on the target. The player climbs to the next, faster level
-  (announced by voice). Catching on the final (fourth) level wins the whole game
-  with a Golf-style celebration, then returns to the menu.
+* **Catch** -- blip on the target. The caught laser is held solid for
+  ``config.Catch.CATCH_HOLD_MS`` so the hit is plainly visible, then the player
+  climbs to the next, faster level (announced by voice). Catching on the final
+  (fourth) level wins the whole game with a Golf-style celebration, then returns
+  to the menu.
 * **Miss** -- blip anywhere else. A failure line plays and the player drops back
   to level 1.
 
@@ -41,10 +43,11 @@ class Catch(Program):
     """Climb four increasingly fast levels by catching the bouncing blip."""
 
     # Phase names (also referenced by the headless test).
-    READY = "READY"          # intro / target preview; auto-advances or skip w/ a press
+    READY = "READY"            # intro / target preview; auto-advances or skip w/ a press
     CHASE = "CHASE"
-    PAUSE = "PAUSE"          # frozen between levels / during the win dance
-    MISS_HOLD = "MISS_HOLD"  # showing where the player missed before the reset
+    PAUSE = "PAUSE"            # frozen between levels / during the win dance
+    MISS_HOLD = "MISS_HOLD"    # showing where the player missed before the reset
+    CATCH_HOLD = "CATCH_HOLD"  # holding the caught laser lit so the hit is seen
 
     def __init__(self):
         # Registers this singleton and sets up tick/scheduler/cooldowns. Static
@@ -62,6 +65,7 @@ class Catch(Program):
         self.level_sounds = tuple(cfg.LEVEL_SOUNDS)
         self.level_advance_ms = cfg.LEVEL_ADVANCE_MS
         self.miss_reset_ms = cfg.MISS_RESET_MS
+        self.catch_hold_ms = cfg.CATCH_HOLD_MS
         self.intro_sound = cfg.INTRO_SOUND
         self.miss_sound = cfg.MISS_SOUND
         self.win_sound = cfg.WIN_SOUND
@@ -115,10 +119,21 @@ class Catch(Program):
         self._blip_accum_ms = 0.0
 
     def _catch(self):
-        """A successful catch: climb a level, or win if this was the last one."""
+        """A successful catch: hold to show the hit then climb, or win on the last."""
         if self.level_index >= len(self.level_step_ms) - 1:
             return self._win()
-        self._enter_level(self.level_index + 1)
+        self._catch_hold()
+
+    def _catch_hold(self):
+        """Freeze the caught laser solid for a beat, then climb to the next level.
+
+        Holds the target lit (solid, not blinking) where the catch landed for
+        ``catch_hold_ms`` so the player clearly sees they got it, before the next
+        round announces itself and previews its new target.
+        """
+        self.state = self.CATCH_HOLD
+        self.game.lasers.set_word(1 << self.target)  # solid "you got it"
+        self.after(self.catch_hold_ms, self._enter_level, self.level_index + 1)
 
     def _miss(self):
         """A miss: hold the missed frame, play the failure line, then drop to L1.
@@ -166,7 +181,7 @@ class Catch(Program):
 
     # -- blip motion --------------------------------------------------------
     def _advance_blip(self, dt):
-        """Step the blip on the current level's clock; bounce forever 0<->13."""
+        """Step the blip on the current level's clock; bounce forever 0<->5."""
         self._blip_accum_ms += dt
         step_ms = self.level_step_ms[self.level_index]
         while self._blip_accum_ms >= step_ms:
