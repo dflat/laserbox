@@ -181,6 +181,7 @@ def _launch_trivia(game, questions):
     class SilentVoice:
         def preload(self, qs): pass
         def say_line(self, key, on_done=None): on_done and on_done()
+        def say_first_to(self, target, on_done=None): on_done and on_done()
         def say_question(self, q, number=None, on_done=None, with_intro=True, with_choices=False): on_done and on_done()
         def say_choice(self, q, slot, on_done=None): on_done and on_done()
         def choice_length(self, q, slot): return 0.0

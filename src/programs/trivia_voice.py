@@ -100,6 +100,7 @@ class Voice:
 
     def preload(self, questions): ...
     def say_line(self, key, on_done=None): ...
+    def say_first_to(self, target, on_done=None): ...
     def say_question(self, question, number=None, on_done=None, with_intro=True,
                      with_choices=False): ...
     def say_choice(self, question, slot, on_done=None): ...
@@ -157,6 +158,9 @@ class PrebakedVoice(Voice):
         "sudden_death": "vo/sudden_death.wav",
         "black_team": "vo/black_team.wav",   # score-line components
         "white_team": "vo/white_team.wav",
+        # opening "first team to <N> wins" frame (N filled from the num/ bank)
+        "first_team_to": "vo/first_team_to.wav",
+        "wins": "vo/wins.wav",
         # spoken choice labels read before each option ("A: ...", "B: ...")
         "choice_label_0": "vo/choice_label_a.wav",
         "choice_label_1": "vo/choice_label_b.wav",
@@ -217,6 +221,11 @@ class PrebakedVoice(Voice):
 
     def say_line(self, key, on_done=None):
         self.seq.play(self._sounds([self.STATIC[key]]), on_done)
+
+    def say_first_to(self, target, on_done=None):
+        """Announce the win condition: "First team to <target> wins"."""
+        rels = [self.STATIC["first_team_to"], f"num/{target}.wav", self.STATIC["wins"]]
+        self.seq.play(self._sounds(rels), on_done)
 
     def say_question(self, question, number=None, on_done=None, with_intro=True,
                      with_choices=False):
@@ -308,6 +317,9 @@ class SilentVoice(Voice):
 
     def say_line(self, key, on_done=None):
         self._record(("line", key), on_done)
+
+    def say_first_to(self, target, on_done=None):
+        self._record(("first_to", target), on_done)
 
     def say_question(self, question, number=None, on_done=None, with_intro=True,
                      with_choices=False):

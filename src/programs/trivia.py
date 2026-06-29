@@ -9,7 +9,8 @@ Flow of one match (``config.Trivia.QUESTIONS_PER_MATCH`` questions, highest scor
 wins):
 
 * **Ready** -- "both teams buzz to begin"; each buzz lights that endcap. Once both
-  are in, the match starts.
+  are in, the box announces the win condition ("first team to N wins") and the
+  match starts.
 * **Asking** -- the question and its four labelled choices ("A: ...", "B: ...")
   are read aloud; buzzing is live from the first word. A buzz **cuts the audio
   instantly** (see :class:`..trivia_voice._VoSequencer`) and hands that team the
@@ -25,8 +26,10 @@ wins):
   at lower stakes.
 * **Score** -- the running score is read aloud after every question.
 
-Scoring (negatives allowed): first buzz +2 / -1; steal +1 / 0. A tie after the
-last question goes to sudden death.
+The match runs until a team reaches ``config.Trivia.TARGET_SCORE`` (announced up
+front as "first team to N wins") -- there is no fixed question count. Scoring
+(negatives allowed): first buzz +2 / -1; steal +1 / 0. If the question pool runs
+out before anyone hits the target, the higher score wins (tie possible).
 
 Question sourcing and voice-over are pluggable strategies; see
 :mod:`~src.programs.trivia_source` and :mod:`~src.programs.trivia_voice`. On the
@@ -85,7 +88,6 @@ class Trivia(Program):
         if self.source is None:
             print("[Trivia] no questions available; returning to menu")
             return self.after(500, self.quit)
-        self.match_length = self.source.match_length
         self._setup_thinking_song()
         self._enter_ready()
 
@@ -228,13 +230,17 @@ class Trivia(Program):
 
     def _begin_match(self):
         self._all_off()
-        self.voice.say_line("lets_begin", on_done=self._next_question)
+        # announce the win condition ("first team to N wins"), then kick off
+        self.voice.say_first_to(
+            self.cfg.TARGET_SCORE,
+            on_done=lambda: self.voice.say_line("lets_begin",
+                                                on_done=self._next_question))
 
     # -- question flow ------------------------------------------------------
     def _next_question(self):
         question = self.source.next_question()
         if question is None:
-            return self._end_match()  # ran out (e.g. endless sudden-death tie)
+            return self._end_match()  # pool exhausted before anyone hit the target
         self.question = question
         self.q_number += 1
         self._start_asking()
@@ -424,11 +430,10 @@ class Trivia(Program):
                              on_done=self._advance_after_score)
 
     def _advance_after_score(self):
-        if self.q_number < self.match_length:
-            return self._next_question()
-        if self.score["black"] != self.score["white"]:
+        # first team to TARGET_SCORE wins; otherwise keep asking questions
+        if max(self.score.values()) >= self.cfg.TARGET_SCORE:
             return self._end_match()
-        self._next_question()  # tied after regulation -> sudden death
+        self._next_question()
 
     def _end_match(self):
         self.phase = _Phase.DONE
@@ -476,8 +481,13 @@ class Trivia(Program):
             self.game.lasers.turn_off(laser_id)
 
     def _ordinal(self):
-        """Ordinal token for the question intro clip ("sudden" past regulation)."""
-        return self.q_number if self.q_number <= self.match_length else "sudden"
+        """Question number for the intro clip ("vo/question_<n>.wav").
+
+        Just the running count now (no fixed regulation length). Clips are baked
+        up to a ceiling; past it the intro clip is simply missing and skipped, so
+        the question still reads -- it just loses its "Nth question:" lead-in.
+        """
+        return self.q_number
 
 
 # Instantiate once at import so it registers with the StateMachine.

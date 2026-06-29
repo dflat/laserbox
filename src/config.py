@@ -330,7 +330,13 @@ class config:
         """
 
         # --- match shape ---
-        QUESTIONS_PER_MATCH = 7  # questions per match; highest score wins
+        # The match runs until a team reaches TARGET_SCORE -- there is no fixed
+        # question count. QUESTIONS_PER_MATCH is now only the size of the question
+        # pool to prepare up front (the bank loads its whole pool regardless; this
+        # mainly bounds a live OpenTDB fetch), so keep it comfortably above the
+        # questions a first-to-TARGET_SCORE race can take.
+        TARGET_SCORE = 10  # first team to reach this score wins the match
+        QUESTIONS_PER_MATCH = 7  # question pool to prepare (not the match length)
         DIFFICULTY = "any"  # any | easy | medium | hard (OpenTDB filter)
         CATEGORY = None  # None = any; else an OpenTDB category id (int)
 

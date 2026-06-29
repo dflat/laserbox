@@ -68,6 +68,9 @@ STATIC_TEXT = {
     "vo/sudden_death.wav": "Sudden death!",
     "vo/black_team.wav": "Black team:",
     "vo/white_team.wav": "White team:",
+    # opening win-condition frame: "First team to" + <N from num/> + "wins!"
+    "vo/first_team_to.wav": "First team to",
+    "vo/wins.wav": "wins!",
     # spoken choice labels read before each option during the question read-out
     "vo/choice_label_a.wav": "A:",
     "vo/choice_label_b.wav": "B:",

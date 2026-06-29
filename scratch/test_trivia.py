@@ -69,6 +69,7 @@ class RecordingSilentVoice:
             on_done()
     def preload(self, questions): pass
     def say_line(self, key, on_done=None): self.lines.append(key); self._done(on_done)
+    def say_first_to(self, target, on_done=None): self.lines.append(("first_to", target)); self._done(on_done)
     def say_question(self, q, number=None, on_done=None, with_intro=True, with_choices=False):
         self.questions.append((q.id, with_intro, with_choices)); self._done(on_done)
     def say_choice(self, q, slot, on_done=None): self._done(on_done)
@@ -178,18 +179,20 @@ def main():
     check("A: final score black 5 / white -1", triv.score == {"black": 5, "white": -1})
     check("A: match ended, back at GameSelect", name() == "GameSelect")
 
-    # === Scenario B: no-buzz timeout, tie after regulation -> sudden death ===
-    triv, voice = launch([Q("s1", 0), Q("s2", 3)], match_length=1)
+    # === Scenario B: a no-buzz question just advances; with no fixed length the
+    #     match ends when the question pool is exhausted (no sudden death) ===
+    triv, voice = launch([Q("s1", 0), Q("s2", 3)])
     press(BLACK_BUZZ); press(WHITE_BUZZ)   # ready -> question 1
     check("B: at question 1", triv.q_number == 1 and triv.phase is trivia_mod._Phase.ASKING)
     triv.buzz_deadline = triv.now_ms - 1     # force the no-buzz window to expire
     step(0)
-    check("B: tie 0-0 after regulation goes to sudden death (q2)",
+    check("B: a no-buzz question simply advances to the next",
           triv.q_number == 2 and triv.phase is trivia_mod._Phase.ASKING)
-    check("B: scores still tied entering sudden death", triv.score == {"black": 0, "white": 0})
+    check("B: scores unchanged after the no-buzz question", triv.score == {"black": 0, "white": 0})
     press(BLACK_BUZZ)
     press(BLACK[3]); press(BLACK[3])       # s2 correct_index == 3
-    check("B: sudden-death winner decided", triv.score == {"black": 2, "white": 0})
+    check("B: last answer scores, exhausted pool ends the match (higher score wins)",
+          triv.score == {"black": 2, "white": 0})
     check("B: match ended, back at GameSelect", name() == "GameSelect")
 
     # === Scenario C: answer (lock-in) timeout counts as a miss ===
@@ -273,6 +276,24 @@ def main():
           and abs((triv.answer_deadline - t0) - config.Trivia.ANSWER_TIMEOUT_MS) <= 2 * dt)
     check("H: the five-second warning is gone for good",
           "five_seconds_remaining" not in voice.lines)
+
+    # === Scenario I: the match ends the instant a team reaches TARGET_SCORE ===
+    target = config.Trivia.TARGET_SCORE
+    per_correct = config.Trivia.SCORE_FIRST_RIGHT
+    n_correct = -(-target // per_correct)        # ceil: correct first-buzzes to win
+    triv, voice = launch([Q(f"i{i}", 2) for i in range(n_correct + 2)])  # more than enough
+    press(BLACK_BUZZ); press(WHITE_BUZZ)   # both ready -> opening announcement + q1
+    check("I: opening announces the win condition ('first team to N')",
+          ("first_to", target) in voice.lines)
+    for _ in range(n_correct - 1):
+        press(BLACK_BUZZ); press(BLACK[2]); press(BLACK[2])   # correct: climb toward target
+        check("I: still playing while below the target",
+              name() == "Trivia" and triv.score["black"] < target)
+    press(BLACK_BUZZ); press(BLACK[2]); press(BLACK[2])       # the winning answer
+    check("I: reaching TARGET_SCORE wins immediately", triv.score["black"] >= target)
+    check("I: no extra question asked after the win (count == answers given)",
+          triv.q_number == n_correct)
+    check("I: match ended, back at GameSelect", name() == "GameSelect")
 
     print()
     if all(passed):
