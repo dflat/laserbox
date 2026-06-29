@@ -112,11 +112,10 @@ def main():
     check("zero hits -> plural moles",
           p0._hits_clips(p0.you_hit, 0) == [p0.you_hit, "whack/num/0.wav", p0.moles_word])
 
-    # miss readout: always 'and got' + count + miss/misses (including a shutout)
+    # miss readout: 'perfect game' at zero, else 'and got' + count + miss/misses
     check("miss clips loaded",
-          all(n in fx for n in (p0.and_got, p0.miss_word, p0.misses_word)))
-    check("zero misses -> 'and got zero misses'",
-          p0._misses_clips(0) == [p0.and_got, "whack/num/0.wav", p0.misses_word])
+          all(n in fx for n in (p0.perfect_game, p0.and_got, p0.miss_word, p0.misses_word)))
+    check("zero misses -> perfect game", p0._misses_clips(0) == [p0.perfect_game])
     check("one miss -> 'and got' + singular",
           p0._misses_clips(1) == [p0.and_got, "whack/num/1.wav", p0.miss_word])
     check("several misses -> 'and got' + plural",

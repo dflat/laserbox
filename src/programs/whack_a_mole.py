@@ -82,6 +82,7 @@ class WhackAMole(Program):
         self.mole_word = cfg.MOLE_WORD
         self.moles_word = cfg.MOLES_WORD
         self.num_dir = cfg.NUM_DIR
+        self.perfect_game = cfg.PERFECT_GAME
         self.and_got = cfg.AND_GOT
         self.miss_word = cfg.MISS_WORD
         self.misses_word = cfg.MISSES_WORD
@@ -105,8 +106,8 @@ class WhackAMole(Program):
         for name in (self.welcome, self.result_single, self.p1_wins, self.p2_wins,
                      self.tie, self.new_highscore, self.new_record_vo,
                      self.you_hit, self.player_1_hit, self.player_2_hit,
-                     self.mole_word, self.moles_word, self.and_got,
-                     self.miss_word, self.misses_word):
+                     self.mole_word, self.moles_word, self.perfect_game,
+                     self.and_got, self.miss_word, self.misses_word):
             self._safe_load_effect(name)
         # Number bank for the spoken score: ones/teens 0-19 + tens 20..90 + hundreds
         # 100/200, from which any 0-299 is composed (see _number_clips).
@@ -435,11 +436,14 @@ class WhackAMole(Program):
         return [lead] + self._number_clips(n) + [word]
 
     def _misses_clips(self, m):
-        """Clip name(s) for the miss readout: 'and got' + count + 'miss'/'misses'.
+        """Clip name(s) for the miss readout: 'perfect game', or 'and got' + count + miss(es).
 
-        Always spoken (including a shutout, "...and got zero misses") so the
-        result reads as one sentence: "...hit five moles and got three misses".
+        A shutout (zero misses) speaks the celebratory 'perfect game' on its own;
+        any other count joins the hit count just spoken before it, reading as one
+        sentence: "...hit five moles and got three misses".
         """
+        if m == 0:
+            return [self.perfect_game]
         word = self.miss_word if m == 1 else self.misses_word
         return [self.and_got] + self._number_clips(m) + [word]
 

@@ -180,8 +180,9 @@ class config:
         # composed by _number_clips up to 299 (e.g. 247 = 200 + 40 + 7).
         NUM_DIR = "whack/num"
         # Miss half, appended after the hit count: "and got" then the count then
-        # MISS_WORD (1) / MISSES_WORD (2+) -> "...and got three misses". Always
-        # spoken, so a shutout reads "...and got zero misses".
+        # MISS_WORD (1) / MISSES_WORD (2+) -> "...and got three misses". A shutout
+        # (zero misses) instead speaks the celebratory PERFECT_GAME on its own.
+        PERFECT_GAME = "whack/perfect_game.wav"
         AND_GOT = "whack/and_got.wav"
         MISS_WORD = "whack/miss.wav"
         MISSES_WORD = "whack/misses.wav"

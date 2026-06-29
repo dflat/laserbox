@@ -42,6 +42,7 @@ entry and is **skippable** — pressing a button to pick a mode cuts it short.
 | `mole.wav` / `moles.wav`              | "mole" / "moles" (suffix after the hit count)  |
 | `and_got.wav`                         | "and got" (joins the hit count to the miss count) |
 | `miss.wav` / `misses.wav`             | "miss" / "misses" (suffix after the miss count) |
+| `perfect_game.wav`                    | "Perfect game!" (spoken instead when a player had 0 misses) |
 | `../menu/whack_a_mole.wav`            | "Whack a mole." (GameSelect menu announcement)|
 
 ## Spoken result readout (every round)
@@ -55,14 +56,14 @@ tens `num/20,30,…,90.wav`, and hundreds `num/100.wav`/`num/200.wav`. Any value
 
 A **miss** is a mole that timed out unwhacked (tracked per half). The hit count
 takes `mole`/`moles` and the miss count `miss`/`misses` (singular only at exactly
-one); the miss half is always spoken, so a shutout reads "…and got **zero**
-misses".
+one). A shutout (zero misses) instead speaks the celebratory `perfect_game`
+("Perfect game!") on its own.
 
 * 1-player: `result_single` → *hits* → *misses* → (`new_highscore` if a PB).
 * 2-player: *hits(P1)* → *misses(P1)* → *hits(P2)* → *misses(P2)* → winner → (`new_record`).
 
   where *hits* = `you_hit`/`player_N_hit` → *count* → `mole`/`moles`, and
-  *misses* = `and_got` → *count* → `miss`/`misses`.
+  *misses* = `perfect_game` (at zero) or `and_got` → *count* → `miss`/`misses`.
 
 ## Score tracker
 
