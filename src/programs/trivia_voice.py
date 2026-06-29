@@ -108,6 +108,22 @@ class Voice:
     def interrupt(self): ...
     def release(self): ...
 
+    def choice_length(self, question, slot) -> float:
+        """Length (seconds) of a choice clip, so the caller can duck under it.
+
+        Returns 0.0 when unknown (no-op duck); overridden by backends that have
+        real audio.
+        """
+        return 0.0
+
+    def line_length(self, key) -> float:
+        """Length (seconds) of a static line, so the caller can time off it.
+
+        Returns 0.0 when unknown (start immediately); overridden by backends
+        that have real audio.
+        """
+        return 0.0
+
     @property
     def busy(self) -> bool:
         return False
@@ -132,7 +148,6 @@ class PrebakedVoice(Voice):
         "ready_prompt": "vo/both_teams_buzz_to_begin.wav",
         "lets_begin": "vo/both_ready_lets_begin.wav",
         "no_buzz": "vo/no_one_buzzed.wav",
-        "five_seconds_remaining": "vo/five_seconds_remaining.wav",
         "correct_answer_is": "vo/the_correct_answer_is.wav",
         "steal_black": "vo/black_team_steal.wav",
         "steal_white": "vo/white_team_steal.wav",
@@ -218,6 +233,19 @@ class PrebakedVoice(Voice):
 
     def say_choice(self, question, slot, on_done=None):
         self.seq.play(self._sounds([self._q_clip(question, f"choice{slot}")]), on_done)
+
+    def choice_length(self, question, slot):
+        """Length (seconds) of the spoken choice clip; 0.0 if it is missing."""
+        sound = self._sound(self._q_clip(question, f"choice{slot}"))
+        return sound.get_length() if sound is not None else 0.0
+
+    def line_length(self, key):
+        """Length (seconds) of a static line clip; 0.0 if unknown or missing."""
+        rel = self.STATIC.get(key)
+        if rel is None:
+            return 0.0
+        sound = self._sound(rel)
+        return sound.get_length() if sound is not None else 0.0
 
     def say_correct_answer(self, question, on_done=None):
         rels = [self.STATIC["correct_answer_is"],

@@ -14,9 +14,12 @@ wins):
   are read aloud; buzzing is live from the first word. A buzz **cuts the audio
   instantly** (see :class:`..trivia_voice._VoSequencer`) and hands that team the
   answer.
-* **Answering** -- the buzzing team's four choice buttons go live. Pressing one
-  speaks + arms that choice; pressing it **again** locks it in; a different button
-  re-arms. A lock-in timeout counts as a miss.
+* **Answering** -- a "thinking song" starts the instant a team is in (and again
+  right after a steal re-read) and *is* the clock: the answer window lasts exactly
+  as long as the song, so running out of song is the lock-in timeout (a miss). The
+  buzzing team's four choice buttons go live; pressing one speaks + arms that
+  choice (gently ducking the song under the spoken option); pressing it **again**
+  locks it in; a different button re-arms.
 * **Resolve** -- correct: cheer + laser dance; wrong: buzzer + flash. A first-buzz
   miss hands a **steal** to the other team (question re-read, but not the choices)
   at lower stakes.
@@ -83,7 +86,25 @@ class Trivia(Program):
             print("[Trivia] no questions available; returning to menu")
             return self.after(500, self.quit)
         self.match_length = self.source.match_length
+        self._setup_thinking_song()
         self._enter_ready()
+
+    def _setup_thinking_song(self):
+        """Resolve the thinking song and measure its length (the answer clock).
+
+        The song's length becomes each answer window, so measure it once up
+        front. A missing/unreadable asset leaves ``_song_len_ms`` None and the
+        answer window falls back to ``ANSWER_TIMEOUT_MS`` -- the game still runs.
+        """
+        self.thinking_song = self.cfg.THINKING_SONG
+        self.thinking_song_vol = self.cfg.THINKING_SONG_VOL
+        self.thinking_song_duck_vol = self.cfg.THINKING_SONG_DUCK_VOL
+        self._song_playing = False
+        self._song_len_ms = None
+        if self.thinking_song:
+            secs = self.game.mixer.music_length(self.thinking_song)
+            if secs:
+                self._song_len_ms = int(secs * 1000)
 
     def teardown(self):
         """Stop any voice-over and release the reserved VO channel, then base."""
@@ -121,10 +142,10 @@ class Trivia(Program):
         self.first_team = None      # who buzzed first this question (steal routing)
         self.armed_slot = None      # choice slot armed but not yet locked in
         self.answer_deadline = None
+        self._answer_gen = 0        # per-turn token guarding a deferred song start
         self.buzz_deadline = None
         self.ready_deadline = None
         self.ready = {"black": False, "white": False}
-        self._warned = False    # has the 5-second warning fired for the active window
 
     def _make_strategy(self):
         """Return a prepared ``(source, voice)``, falling back live -> bank.
@@ -165,20 +186,12 @@ class Trivia(Program):
             if now > self.buzz_deadline:
                 self._no_buzz_timeout()
         elif self.phase is _Phase.ANSWERING and self.answer_deadline is not None:
-            self._maybe_warn(self.answer_deadline)
+            # the thinking song is the clock: when it runs out, the turn is over
             if now > self.answer_deadline:
                 self._answer_timeout()
         elif self.phase is _Phase.READY:
             if self.ready_deadline is not None and now > self.ready_deadline:
                 self._reprompt_ready()
-
-    def _maybe_warn(self, deadline):
-        """Announce 'five seconds remaining' once, WARNING_MS before a deadline."""
-        if self._warned:
-            return
-        if self.now_ms >= deadline - self.cfg.WARNING_MS:
-            self._warned = True
-            self.voice.say_line("five_seconds_remaining")
 
     def _on_button_down(self, button):
         if self.phase is _Phase.READY:
@@ -241,7 +254,6 @@ class Trivia(Program):
         """Question read out with no buzz -> open a short post-question window."""
         if self.phase is _Phase.ASKING:
             self.buzz_deadline = self.now_ms + self.cfg.POST_QUESTION_BUZZ_MS
-            self._warned = False
 
     def _asking_buzz(self, button):
         team = self.team_of_buzz.get(button)
@@ -254,7 +266,11 @@ class Trivia(Program):
         self.game.lasers.turn_on(self.endcap[team])
         self.game.mixer.play_effect(self.BUZZ_IN)
         self.voice.say_line(f"{team}_team")  # confirm aloud who buzzed in first
-        self._begin_answer(team, "first")
+        # Hold the thinking song until that confirmation has played; it (and the
+        # clock it drives) starts a beat later. The steal path has no such intro,
+        # so it starts the song immediately (delay_ms=0) -- timing left as-is.
+        delay_ms = int(self.voice.line_length(f"{team}_team") * 1000)
+        self._begin_answer(team, "first", delay_ms=delay_ms)
 
     def _no_buzz_timeout(self):
         """Nobody buzzed: reveal the answer, no score, then announce + advance."""
@@ -264,13 +280,64 @@ class Trivia(Program):
         self.voice.say_correct_answer(self.question, on_done=self._score_announce)
 
     # -- answering (arm / confirm) -----------------------------------------
-    def _begin_answer(self, team, stakes):
+    def _begin_answer(self, team, stakes, delay_ms=0):
         self.phase = _Phase.ANSWERING
         self.current_team = team
         self.current_stakes = stakes
         self.armed_slot = None
-        self.answer_deadline = self.now_ms + self.cfg.ANSWER_TIMEOUT_MS
-        self._warned = False
+        self.answer_deadline = None     # opens when the clock (song) starts
+        self._answer_gen += 1
+        if delay_ms > 0:
+            # let the "<team> team" confirmation finish before the song/clock
+            self.after(delay_ms, self._start_answer_clock, self._answer_gen)
+        else:
+            self._start_answer_clock(self._answer_gen)
+
+    def _start_answer_clock(self, gen):
+        """Start the thinking song and open the answer window (= its length).
+
+        The token ``gen`` (and the phase) guard a *deferred* start: if the turn
+        already resolved or a new one began before this fires, it is a no-op, so a
+        stale delayed start never plays a stray song or sets a phantom deadline.
+        """
+        if gen != self._answer_gen or self.phase is not _Phase.ANSWERING:
+            return
+        # the thinking song doubles as the timer: the window is its length
+        window_ms = self._start_thinking_song()
+        self.answer_deadline = self.now_ms + window_ms
+
+    # -- thinking song (the answer-phase clock) -----------------------------
+    def _start_thinking_song(self):
+        """Play the thinking song once and return the answer window length (ms).
+
+        The song *is* the clock: the window equals the song's length, so when it
+        runs out the deadline check in :meth:`_check_timers` fires
+        :meth:`_answer_timeout`. Called the instant an answer window opens -- both
+        the first buzz and a steal route through :meth:`_begin_answer`. Falls back
+        to ``ANSWER_TIMEOUT_MS`` when the asset is absent so the game still runs.
+        """
+        self._song_playing = False
+        if self.thinking_song and self._song_len_ms:
+            try:
+                self.game.mixer.load_music(self.thinking_song, loops=0)
+                self.game.mixer.set_music_volume(self.thinking_song_vol)
+                self._song_playing = True
+                return self._song_len_ms
+            except Exception as e:
+                print(f"[Trivia] thinking song unavailable: {e}")
+        return self.cfg.ANSWER_TIMEOUT_MS
+
+    def _stop_thinking_song(self):
+        """Cut the thinking song with a quick fade (the turn ended early)."""
+        if self._song_playing:
+            self.game.mixer.fade_music(fade_ms=300)
+            self._song_playing = False
+
+    def _duck_song_for(self, dur_s):
+        """Gently dip the thinking song under a spoken choice (Catch-style)."""
+        if self._song_playing and dur_s:
+            self.game.mixer.duck_music(dur_s, duck_vol=self.thinking_song_duck_vol,
+                                       restore_vol=self.thinking_song_vol)
 
     def _answering_press(self, button):
         mapping = self.choice_of_button.get(button)
@@ -293,6 +360,7 @@ class Trivia(Program):
         self._all_off()
         self.game.lasers.turn_on(self.team_choices[team][slot])
         self.armed_slot = slot
+        self._duck_song_for(self.voice.choice_length(self.question, slot))
         self.voice.say_choice(self.question, slot)
 
     def _lock_in(self, slot):
@@ -311,6 +379,7 @@ class Trivia(Program):
     # -- resolution / steal -------------------------------------------------
     def _resolve(self, correct):
         self.phase = _Phase.RESOLVING
+        self._stop_thinking_song()  # the answer is in -- the clock stops
         team, stakes = self.current_team, self.current_stakes
         if correct:
             self.score[team] += (self.cfg.SCORE_FIRST_RIGHT if stakes == "first"

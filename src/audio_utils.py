@@ -83,6 +83,27 @@ class Mixer:
         """Fade the music out over ``fade_ms`` milliseconds."""
         pygame.mixer.music.fadeout(fade_ms)
 
+    def music_length(self, filename):
+        """Return the duration (seconds) of a track in ``MUSIC_DIR``.
+
+        ``pygame.mixer.music`` exposes no length, so this loads the file as a
+        ``Sound`` purely to measure it (the bytes are discarded). Used when a
+        track's own length needs to drive timing -- e.g. Trivia's thinking song
+        doubling as the answer clock.
+
+        Args:
+            filename: File name under ``assets/music``.
+
+        Returns:
+            float | None: Length in seconds, or ``None`` if it can't be read.
+        """
+        path = os.path.join(self.MUSIC_DIR, filename)
+        try:
+            return Sound(path).get_length()
+        except Exception as e:  # pragma: no cover - missing/unsupported file
+            print(f"[Mixer] could not measure {filename!r}: {e}")
+            return None
+
     def stop_all(self):
         """Stop the music stream and every playing effect channel at once."""
         pygame.mixer.music.stop()

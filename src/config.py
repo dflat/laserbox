@@ -335,15 +335,28 @@ class config:
         CATEGORY = None  # None = any; else an OpenTDB category id (int)
 
         # --- timing (milliseconds) ---
-        # Choice-selection deadline after a buzz; set ONCE per turn and never reset
-        # by selecting/re-arming a choice. Gets the WARNING_MS warning.
+        # FALLBACK choice-selection deadline, used ONLY when the thinking-song
+        # asset is missing. Normally the thinking song's own length IS the answer
+        # clock (see THINKING_SONG below). Set ONCE per turn, never reset by
+        # selecting/re-arming a choice.
         ANSWER_TIMEOUT_MS = 15000
         # Buzz window after the question + choices finish reading. Short and with
         # NO warning (the window is the warning).
         POST_QUESTION_BUZZ_MS = 5000
-        WARNING_MS = 5000  # "five seconds remaining" warning before the answer deadline
         VO_GAP_MS = 120  # gap inserted between chained voice-over clips
         READY_REPROMPT_MS = 12000  # re-announce "buzz to begin" if a team stalls
+
+        # --- thinking song (the answer-phase clock) ---
+        # Plays once (no loop) the instant an answer window opens -- right after a
+        # buzz, and right after a steal re-read -- and serves AS the timer: the
+        # answer window lasts exactly the song's length, and running out of song
+        # is the lock-in timeout. So author it to the old ANSWER_TIMEOUT_MS above
+        # (~15 s). Dropped flat under ``assets/music/``; prefer OGG to save space.
+        # Spoken choices gently duck it to THINKING_SONG_DUCK_VOL (Catch-style).
+        # Set THINKING_SONG = None to disable (falls back to ANSWER_TIMEOUT_MS).
+        THINKING_SONG = "trivia_thinking.ogg"
+        THINKING_SONG_VOL = 0.6
+        THINKING_SONG_DUCK_VOL = 0.35
 
         # --- teams (named for the keycap colours on each half of the box) ---
         BLACK_BUZZ = 6  # left endcap

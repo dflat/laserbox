@@ -72,6 +72,8 @@ class RecordingSilentVoice:
     def say_question(self, q, number=None, on_done=None, with_intro=True, with_choices=False):
         self.questions.append((q.id, with_intro, with_choices)); self._done(on_done)
     def say_choice(self, q, slot, on_done=None): self._done(on_done)
+    def choice_length(self, q, slot): return 0.0
+    def line_length(self, key): return 0.0
     def say_correct_answer(self, q, on_done=None): self._done(on_done)
     def say_score(self, b, w, on_done=None): self._done(on_done)
     def interrupt(self): self.interrupts += 1
@@ -256,22 +258,21 @@ def main():
     press(BLACK[1])                            # re-arm a different wrong slot
     check("G: deadline still not reset by re-arming", triv.answer_deadline == d0)
 
-    # === Scenario H: no warning in the buzz-in window; warning in answering ===
+    # === Scenario H: the thinking song is the answer clock (warning removed) ===
+    # Force the no-asset path (so this is deterministic whether or not a song
+    # file is present): the answer window then falls back to ANSWER_TIMEOUT_MS,
+    # and the old "five seconds remaining" warning is gone for good.
     triv, voice = launch([Q("h1", 2)], match_length=1)
-    press(BLACK_BUZZ); press(WHITE_BUZZ)       # -> ASKING, buzz window open
-    check("H: buzz-in window is open", triv.phase is trivia_mod._Phase.ASKING
-          and triv.buzz_deadline is not None)
-    step(0); step(0)                           # tick inside the (short) buzz window
-    check("H: no five-second warning during the buzz-in window",
-          "five_seconds_remaining" not in voice.lines
-          and triv.phase is trivia_mod._Phase.ASKING)
-    press(BLACK_BUZZ)                          # black answering
-    triv._warned = False
-    triv.answer_deadline = triv.now_ms + (config.Trivia.WARNING_MS - 1)  # enter warning band
-    step(0)
-    check("H: warning DOES fire inside the answering window",
-          "five_seconds_remaining" in voice.lines
-          and triv.phase is trivia_mod._Phase.ANSWERING)
+    triv.thinking_song = None      # force the missing-asset fallback
+    triv._song_len_ms = None
+    press(BLACK_BUZZ); press(WHITE_BUZZ)       # -> ASKING
+    t0 = triv.now_ms
+    press(BLACK_BUZZ)                          # black answering; window opens here
+    check("H: answer window falls back to ANSWER_TIMEOUT_MS without a song asset",
+          triv.answer_deadline is not None
+          and abs((triv.answer_deadline - t0) - config.Trivia.ANSWER_TIMEOUT_MS) <= 2 * dt)
+    check("H: the five-second warning is gone for good",
+          "five_seconds_remaining" not in voice.lines)
 
     print()
     if all(passed):

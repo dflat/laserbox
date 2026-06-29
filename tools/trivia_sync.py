@@ -59,7 +59,6 @@ STATIC_TEXT = {
     "vo/both_teams_buzz_to_begin.wav": "Both teams, buzz in to begin.",
     "vo/both_ready_lets_begin.wav": "Both teams are ready. Let's begin!",
     "vo/no_one_buzzed.wav": "Nobody buzzed in.",
-    "vo/five_seconds_remaining.wav": "Five seconds remaining.",
     "vo/the_correct_answer_is.wav": "The correct answer is:",
     "vo/black_team_steal.wav": "Black team, here is your chance to steal.",
     "vo/white_team_steal.wav": "White team, here is your chance to steal.",

@@ -183,6 +183,8 @@ def _launch_trivia(game, questions):
         def say_line(self, key, on_done=None): on_done and on_done()
         def say_question(self, q, number=None, on_done=None, with_intro=True, with_choices=False): on_done and on_done()
         def say_choice(self, q, slot, on_done=None): on_done and on_done()
+        def choice_length(self, q, slot): return 0.0
+        def line_length(self, key): return 0.0
         def say_correct_answer(self, q, on_done=None): on_done and on_done()
         def say_score(self, b, w, on_done=None): on_done and on_done()
         def interrupt(self): pass
