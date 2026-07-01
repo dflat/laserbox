@@ -20,6 +20,7 @@ The intro prompt is skippable, exactly like SimonSays' welcome: making a selecti
 before the spoken prompt finishes starts the round immediately. Reachable from the
 operator menu (GameSelect slot 8) or via ``python -m src -s -p WhackAMole``.
 """
+
 import json
 import os
 import random
@@ -40,9 +41,9 @@ class WhackAMole(Program):
     """Timed whack-a-mole on the laser row, single- or two-player."""
 
     # Phase names (also referenced by the headless test).
-    READY = "READY"     # intro prompt; waiting for a black/white button to pick mode
-    PLAY = "PLAY"       # moles spawning; the timed round
-    RESULT = "RESULT"   # round over: cleared bay, result voice, k-dance, then quit
+    READY = "READY"  # intro prompt; waiting for a black/white button to pick mode
+    PLAY = "PLAY"  # moles spawning; the timed round
+    RESULT = "RESULT"  # round over: cleared bay, result voice, k-dance, then quit
 
     def __init__(self):
         # Registers this singleton; static data only (self.game does not exist yet).
@@ -91,8 +92,11 @@ class WhackAMole(Program):
         self.music = cfg.MUSIC
 
         # Persistent score tracker: solo personal best + 2-player all-time best.
-        self.highscore_path = (cfg.HIGHSCORE_PATH if os.path.isabs(cfg.HIGHSCORE_PATH)
-                               else os.path.join(config.PROJECT_ROOT, cfg.HIGHSCORE_PATH))
+        self.highscore_path = (
+            cfg.HIGHSCORE_PATH
+            if os.path.isabs(cfg.HIGHSCORE_PATH)
+            else os.path.join(config.PROJECT_ROOT, cfg.HIGHSCORE_PATH)
+        )
         self._load_scores()
 
         # Sound effects, loaded in start() (not __init__) so the Sounds are valid
@@ -103,19 +107,35 @@ class WhackAMole(Program):
         self._safe_load_effect(self.popup, volume=0.6)
         self._safe_load_effect(self.hammer, volume=0.7)
         self._safe_load_effect(self.mole_hit, volume=0.9)
-        for name in (self.welcome, self.result_single, self.p1_wins, self.p2_wins,
-                     self.tie, self.new_highscore, self.new_record_vo,
-                     self.you_hit, self.player_1_hit, self.player_2_hit,
-                     self.mole_word, self.moles_word, self.perfect_game,
-                     self.and_got, self.miss_word, self.misses_word):
+        for name in (
+            self.welcome,
+            self.result_single,
+            self.p1_wins,
+            self.p2_wins,
+            self.tie,
+            self.new_highscore,
+            self.new_record_vo,
+            self.you_hit,
+            self.player_1_hit,
+            self.player_2_hit,
+            self.mole_word,
+            self.moles_word,
+            self.perfect_game,
+            self.and_got,
+            self.miss_word,
+            self.misses_word,
+        ):
             self._safe_load_effect(name)
         # Number bank for the spoken score: ones/teens 0-19 + tens 20..90 + hundreds
         # 100/200, from which any 0-299 is composed (see _number_clips).
         for value in list(range(20)) + [20, 30, 40, 50, 60, 70, 80, 90, 100, 200]:
             self._safe_load_effect(self._num_clip(value))
         self._safe_load_effect(self.congrats, volume=config.CONGRATS_VOL)
-        self._congrats_dur = (self.game.mixer.effects[self.congrats].get_length()
-                              if self.congrats in self.game.mixer.effects else 3.0)
+        self._congrats_dur = (
+            self.game.mixer.effects[self.congrats].get_length()
+            if self.congrats in self.game.mixer.effects
+            else 3.0
+        )
         # Fallback bonk if the hit folder is empty.
         try:
             self.game.mixer.use_patch(self.fallback_patch)
@@ -124,17 +144,17 @@ class WhackAMole(Program):
 
         # Run state: reset everything since start() may run more than once.
         self.phase = self.READY
-        self.mode = None                # 'single' | 'multi'
-        self.sides = []                 # [(name, ports), ...]; set when mode is picked
-        self.score = {}                 # side name -> hits
-        self.misses = {}                # side name -> moles that timed out unwhacked
-        self.spawn_count = {}           # side name -> total moles spawned (for balance)
-        self.moles = {}                 # port -> remaining lifetime (ms)
-        self._clock_ms = 0.0            # free-running clock for blink/prompt phases
-        self._elapsed_ms = 0.0          # time into the current round
-        self._spawn_accum = 0.0         # accumulator that triggers spawns
-        self._winner = None             # 'left' | 'right' | 'tie' set at RESULT (multi)
-        self._broke_record = False      # set in RESULT when a saved record is beaten
+        self.mode = None  # 'single' | 'multi'
+        self.sides = []  # [(name, ports), ...]; set when mode is picked
+        self.score = {}  # side name -> hits
+        self.misses = {}  # side name -> moles that timed out unwhacked
+        self.spawn_count = {}  # side name -> total moles spawned (for balance)
+        self.moles = {}  # port -> remaining lifetime (ms)
+        self._clock_ms = 0.0  # free-running clock for blink/prompt phases
+        self._elapsed_ms = 0.0  # time into the current round
+        self._spawn_accum = 0.0  # accumulator that triggers spawns
+        self._winner = None  # 'left' | 'right' | 'tie' set at RESULT (multi)
+        self._broke_record = False  # set in RESULT when a saved record is beaten
 
         self.game.lasers.set_word(0)
         self._safe_play_effect(self.welcome)  # spoken prompt; a press skips it
@@ -211,8 +231,8 @@ class WhackAMole(Program):
         self._spawn_accum = 0.0
         self.phase = self.PLAY
         self._safe_load_music(self.music)
-        for _ in self.sides:           # prime the board so play starts at once
-            self._spawn_tick()         # 1-player fills to a random 1..3; 2-player one/half
+        for _ in self.sides:  # prime the board so play starts at once
+            self._spawn_tick()  # 1-player fills to a random 1..3; 2-player one/half
         self.after(self.round_ms, self._end_round)
 
     def _age_moles(self, dt):
@@ -221,7 +241,7 @@ class WhackAMole(Program):
             self.moles[port] -= dt
             if self.moles[port] <= 0:
                 del self.moles[port]
-                self.misses[self._side_of(port)] += 1   # timed out unwhacked = a miss
+                self.misses[self._side_of(port)] += 1  # timed out unwhacked = a miss
 
     def _spawn(self, dt):
         """Spawn moles on the ramping cadence (faster as the round progresses)."""
@@ -239,14 +259,18 @@ class WhackAMole(Program):
         half that is "behind"), giving each half the single-player spawn rate while
         keeping the per-half mole counts equal.
         """
-        per_side = _lerp(self._elapsed_ms / self.round_ms,
-                         self.spawn_ms_start, self.spawn_ms_end)
+        per_side = _lerp(
+            self._elapsed_ms / self.round_ms, self.spawn_ms_start, self.spawn_ms_end
+        )
         return per_side / len(self.sides)
 
     def _current_lifetime_ms(self):
         """How long a freshly spawned mole stays lit right now (shrinks over the round)."""
-        return _lerp(self._elapsed_ms / self.round_ms,
-                     self.lifetime_ms_start, self.lifetime_ms_end)
+        return _lerp(
+            self._elapsed_ms / self.round_ms,
+            self.lifetime_ms_start,
+            self.lifetime_ms_end,
+        )
 
     def _spawn_tick(self):
         """One spawn event: 1-player tops up to a random 1..3, 2-player adds one."""
@@ -295,10 +319,10 @@ class WhackAMole(Program):
         """Buzzer: clear the bay, announce the result (+ any record), dance, then quit."""
         self.phase = self.RESULT
         self.moles = {}
-        self.game.lasers.set_word(0)   # clear the laser bay the moment the round ends
+        self.game.lasers.set_word(0)  # clear the laser bay the moment the round ends
         self.game.mixer.fade_music(1500)
         self._broke_record = False
-        self._winner = None            # 'left' | 'right' | 'tie' (None in 1-player)
+        self._winner = None  # 'left' | 'right' | 'tie' (None in 1-player)
 
         # ``lines`` are the spoken clips played back-to-back before the jingle:
         # the result, the spoken score readout, then a record fanfare if beaten.
@@ -306,8 +330,8 @@ class WhackAMole(Program):
         if self.mode == "single":
             score = self.score["left"]
             lines.append(self.result_single)
-            lines += self._hits_clips(self.you_hit, score)     # "You hit N mole(s)"
-            lines += self._misses_clips(self.misses["left"])   # "and got M miss(es)"
+            lines += self._hits_clips(self.you_hit, score)  # "You hit N mole(s)"
+            lines += self._misses_clips(self.misses["left"])  # "and got M miss(es)"
             if self._record_broken("solo_best", score):
                 lines.append(self.new_highscore)
         else:
@@ -317,11 +341,14 @@ class WhackAMole(Program):
             lines += self._hits_clips(self.player_2_hit, right)
             lines += self._misses_clips(self.misses["right"])
             if left > right:
-                self._winner = "left"; lines.append(self.p1_wins)
+                self._winner = "left"
+                lines.append(self.p1_wins)
             elif right > left:
-                self._winner = "right"; lines.append(self.p2_wins)
+                self._winner = "right"
+                lines.append(self.p2_wins)
             else:
-                self._winner = "tie"; lines.append(self.tie)
+                self._winner = "tie"
+                lines.append(self.tie)
             if self._record_broken("versus_best", max(left, right)):
                 lines.append(self.new_record_vo)
 
@@ -411,7 +438,7 @@ class WhackAMole(Program):
         clips = []
         if hundreds:
             clips.append(self._num_clip(hundreds * 100))  # 100 or 200
-        if rem or not hundreds:                            # ...05 -> skip; 0 -> "zero"
+        if rem or not hundreds:  # ...05 -> skip; 0 -> "zero"
             clips += self._tens_ones_clips(rem)
         return clips
 
@@ -489,10 +516,10 @@ class WhackAMole(Program):
                 print(f"[WhackAMole] could not play {name!r}: {e}")
 
     def _safe_load_music(self, name):
-        """Start a looping backing track if present; quietly skip if it is missing."""
+        """Start a non-looping backing track if present; quietly skip if it is missing."""
         try:
-            self.game.mixer.load_music(name, loops=-1)
-            self.game.mixer.set_music_volume(0.75)
+            self.game.mixer.load_music(name, loops=0)
+            self.game.mixer.set_music_volume(0.95)
         except Exception as e:
             print(f"[WhackAMole] backing music unavailable: {e}")
 

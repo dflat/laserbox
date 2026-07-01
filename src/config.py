@@ -134,7 +134,7 @@ class config:
     class WhackAMole:
         """Settings for :class:`~src.programs.whack_a_mole.WhackAMole`."""
 
-        ROUND_MS = 48000  # length of a timed round
+        ROUND_MS = 47000  # length of a timed round
 
         # Port layout: two halves. 1-player uses LEFT only; 2-player uses both,
         # LEFT = player 1 ("black" keys), RIGHT = player 2 ("white" keys). The box
