@@ -134,7 +134,7 @@ class config:
     class WhackAMole:
         """Settings for :class:`~src.programs.whack_a_mole.WhackAMole`."""
 
-        ROUND_MS = 45000  # length of a timed round
+        ROUND_MS = 48000  # length of a timed round
 
         # Port layout: two halves. 1-player uses LEFT only; 2-player uses both,
         # LEFT = player 1 ("black" keys), RIGHT = player 2 ("white" keys). The box
@@ -177,22 +177,22 @@ class config:
         MOLE_HIT = "whack/hits/mole-hit.wav"
         # Spoken stubs -- skipped cleanly if the wav is not present yet (see the
         # README in assets/sounds/effects/whack/ for the lines to record).
-        WELCOME = "whack/welcome.wav"            # "black button for one player..."
+        WELCOME = "whack/welcome.wav"  # "black button for one player..."
         RESULT_SINGLE = "whack/result_single.wav"
         P1_WINS = "whack/player_1_wins.wav"
         P2_WINS = "whack/player_2_wins.wav"
         TIE = "whack/tie.wav"
         NEW_HIGHSCORE = "whack/new_highscore.wav"  # solo personal-best beaten
-        NEW_RECORD = "whack/new_record.wav"        # 2-player all-time best beaten
+        NEW_RECORD = "whack/new_record.wav"  # 2-player all-time best beaten
         # Spoken end-of-round result readout: "<who> hit N mole(s) and got M
         # miss(es)", composed clip-by-clip (Trivia-style). The lead-ins name the
         # whacker; the count is built from the num/ bank; MOLE/MOLES and the miss
         # words below carry the singular/plural.
-        YOU_HIT = "whack/you_hit.wav"              # 1-player: "You hit" + N + mole(s)
-        PLAYER_1_HIT = "whack/player_1_hit.wav"    # 2-player: "Player one hit" + N
-        PLAYER_2_HIT = "whack/player_2_hit.wav"    # 2-player: "Player two hit" + M
-        MOLE_WORD = "whack/mole.wav"               # singular, after a count of 1
-        MOLES_WORD = "whack/moles.wav"             # plural, after any other count
+        YOU_HIT = "whack/you_hit.wav"  # 1-player: "You hit" + N + mole(s)
+        PLAYER_1_HIT = "whack/player_1_hit.wav"  # 2-player: "Player one hit" + N
+        PLAYER_2_HIT = "whack/player_2_hit.wav"  # 2-player: "Player two hit" + M
+        MOLE_WORD = "whack/mole.wav"  # singular, after a count of 1
+        MOLES_WORD = "whack/moles.wav"  # plural, after any other count
         # num/<0..19>.wav + tens num/<20..90>.wav + hundreds num/100.wav,200.wav,
         # composed by _number_clips up to 299 (e.g. 247 = 200 + 40 + 7).
         NUM_DIR = "whack/num"
@@ -206,7 +206,7 @@ class config:
         # Shared assets that already exist in the repo.
         CONGRATS = "positive/congrats_extended.wav"
         FALLBACK_PATCH = "kicks_ascending_mono"  # pitched bonk if mole-hit.wav absent
-        MUSIC = "banjo.wav"                      # looping backing track (optional)
+        MUSIC = "whack-a-mole.ogg"  # looping backing track (optional)
 
         # Persistent score tracker (per-box, not version-controlled). Relative
         # paths are resolved against config.PROJECT_ROOT; an absolute path is used
@@ -292,7 +292,7 @@ class config:
         # itself previews the change (wavs under assets/sounds/effects/menu/).
         VOLUME_UP = "volume_up.wav"
         VOLUME_DOWN = "volume_down.wav"
-        VOLUME_MAX = "max_volume.wav"      # spoken when a step lands at 100%
+        VOLUME_MAX = "max_volume.wav"  # spoken when a step lands at 100%
         VOLUME_MUTED = "volume_muted.wav"  # spoken when a step lands at 0%
         # Physical left->right laser order for the volume bar. The two endcap ports
         # (6 and 7) sit at right angles to the in-line bay and are skipped, so the
@@ -315,7 +315,7 @@ class config:
         # system-wide setting, not a game record.
         STATE_PATH = "state/system.json"
         DEFAULT = 0.7  # level used on first boot, before any state file exists
-        STEP = 0.1     # 10% per button press
+        STEP = 0.1  # 10% per button press
         MIN = 0.0
         MAX = 1.0
 
