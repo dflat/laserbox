@@ -235,13 +235,10 @@ class config:
         MENU = {
             0: ("Golf", "golf.wav"),
             1: ("Flipper", "flipper.wav"),
-            2: ("ClueFinder", "clue_finder.wav"),
-            3: ("MusicMaker", "music_maker.wav"),
-            4: ("BirthdayComposer", "birthday.wav"),
-            5: ("SimonSays", "simon_says.wav"),
-            6: ("Trivia", "trivia.wav"),
-            7: ("Catch", "catch.wav"),
-            8: ("WhackAMole", "whack_a_mole.wav"),
+            2: ("SimonSays", "simon_says.wav"),
+            3: ("Trivia", "trivia.wav"),
+            4: ("Catch", "catch.wav"),
+            5: ("WhackAMole", "whack_a_mole.wav"),
         }
 
         # --- system power actions (last two physical buttons) ---
